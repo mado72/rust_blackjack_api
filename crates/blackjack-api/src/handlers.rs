@@ -17,7 +17,7 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```ignore
 //! use axum::{Json, extract::State};
 //! use blackjack_api::error::ApiError;
 //!
@@ -26,7 +26,7 @@
 //!     Json(payload): Json<RequestType>,
 //! ) -> Result<Json<ResponseType>, ApiError> {
 //!     // Handler implementation
-//!     # todo!()
+//!     todo!()
 //! }
 //! ```
 

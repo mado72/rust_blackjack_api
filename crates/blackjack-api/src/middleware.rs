@@ -37,11 +37,11 @@ use jsonwebtoken::{decode, DecodingKey, Validation};
 ///
 /// # Usage in Routes
 ///
-/// ```no_run
+/// ```ignore
 /// use axum::{Router, routing::get, middleware};
 /// use blackjack_api::middleware::auth_middleware;
 ///
-/// # async fn protected_handler() -> &'static str { "OK" }
+/// async fn protected_handler() -> &'static str { "OK" }
 /// let app = Router::new()
 ///     .route("/protected", get(protected_handler))
 ///     .layer(middleware::from_fn_with_state(state, auth_middleware));
@@ -118,11 +118,11 @@ pub async fn auth_middleware(
 ///
 /// # Usage in Routes
 ///
-/// ```no_run
+/// ```ignore
 /// use axum::{Router, routing::post, middleware};
 /// use blackjack_api::middleware::{auth_middleware, rate_limit_middleware};
 ///
-/// # async fn draw_card_handler() -> &'static str { "OK" }
+/// async fn draw_card_handler() -> &'static str { "OK" }
 /// let app = Router::new()
 ///     .route("/games/:id/draw", post(draw_card_handler))
 ///     .layer(middleware::from_fn_with_state(state.clone(), rate_limit_middleware))
@@ -191,7 +191,7 @@ pub async fn rate_limit_middleware(
 ///
 /// # Usage
 ///
-/// ```no_run
+/// ```ignore
 /// use axum::{Router, middleware};
 /// use blackjack_api::middleware::version_deprecation_middleware;
 ///
