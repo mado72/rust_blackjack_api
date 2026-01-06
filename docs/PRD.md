@@ -90,19 +90,19 @@ This document details the transformation of the CLI blackjack game into a produc
 
 ## Phase 3: Service Crate with Migrations, Logging and Config
 
-**Status:** `pending`  
+**Status:** `completed`  
 **Dependencies:** Phase 2  
 **Estimated Effort:** 6 hours
 
 ### Tasks
 
-- [ ] Create `ServiceConfig` struct:
-  - [ ] Fields: `max_players: u8, min_players: u8`
-  - [ ] Load from env vars with defaults (1-10)
-- [ ] Create `GameService` struct:
-  - [ ] Fields: `games: Arc<Mutex<HashMap<Uuid, Game>>>, config: ServiceConfig`
-- [ ] Create `crates/blackjack-service/migrations/` directory
-- [ ] Create `20250101000000_initial_schema.sql` with commented SQL:
+- [x] Create `ServiceConfig` struct:
+  - [x] Fields: `max_players: u8, min_players: u8`
+  - [x] Load from env vars with defaults (1-10)
+- [x] Create `GameService` struct:
+  - [x] Fields: `games: Arc<Mutex<HashMap<Uuid, Game>>>, config: ServiceConfig`
+- [x] Create `crates/blackjack-service/migrations/` directory
+- [x] Create `20250101000000_initial_schema.sql` with commented SQL:
   ```sql
   -- CREATE TABLE games (
   --   id TEXT PRIMARY KEY,
@@ -129,32 +129,32 @@ This document details the transformation of the CLI blackjack game into a produc
   -- CREATE INDEX idx_players_game ON players(game_id);
   -- CREATE INDEX idx_cards_player ON cards_history(player_id);
   ```
-- [ ] Implement `GameService::create_game(emails) -> Result<Uuid, GameError>`:
-  - [ ] Validate against `config.min_players` and `config.max_players`
-  - [ ] Log game creation with `tracing::info!`
-  - [ ] Add `#[tracing::instrument(skip(self), fields(game_id))]`
-- [ ] Implement `GameService::draw_card(game_id, email) -> Result<DrawCardResponse>`:
-  - [ ] Return `{card: Card, current_points: u8, busted: bool, cards_remaining: usize, cards_history: Vec<Card>}`
-  - [ ] Log card drawn with `tracing::debug!`
-  - [ ] Add instrumentation with game_id and player_email fields
-- [ ] Implement `GameService::set_ace_value(game_id, email, card_id, as_eleven) -> Result<PlayerStateResponse>`:
-  - [ ] Return `{points: u8, busted: bool}`
-  - [ ] Add instrumentation
-- [ ] Implement `GameService::get_game_state(game_id) -> Result<GameStateResponse>`:
-  - [ ] Return `{players: HashMap<email, PlayerInfo>, cards_in_deck: usize, finished: bool}`
-  - [ ] `PlayerInfo {points: u8, cards_history: Vec<Card>, busted: bool}`
-- [ ] Implement `GameService::finish_game(game_id) -> Result<GameResult>`:
-  - [ ] Log winner with `tracing::info!`
-- [ ] Create `GameError` enum with thiserror derives:
-  - [ ] Variants: GameNotFound, PlayerNotInGame, PlayerAlreadyBusted, InvalidPlayerCount, InvalidEmail, DeckEmpty, GameAlreadyFinished
+- [x] Implement `GameService::create_game(emails) -> Result<Uuid, GameError>`:
+  - [x] Validate against `config.min_players` and `config.max_players`
+  - [x] Log game creation with `tracing::info!`
+  - [x] Add `#[tracing::instrument(skip(self), fields(game_id))]`
+- [x] Implement `GameService::draw_card(game_id, email) -> Result<DrawCardResponse>`:
+  - [x] Return `{card: Card, current_points: u8, busted: bool, cards_remaining: usize, cards_history: Vec<Card>}`
+  - [x] Log card drawn with `tracing::debug!`
+  - [x] Add instrumentation with game_id and player_email fields
+- [x] Implement `GameService::set_ace_value(game_id, email, card_id, as_eleven) -> Result<PlayerStateResponse>`:
+  - [x] Return `{points: u8, busted: bool}`
+  - [x] Add instrumentation
+- [x] Implement `GameService::get_game_state(game_id) -> Result<GameStateResponse>`:
+  - [x] Return `{players: HashMap<email, PlayerInfo>, cards_in_deck: usize, finished: bool}`
+  - [x] `PlayerInfo {points: u8, cards_history: Vec<Card>, busted: bool}`
+- [x] Implement `GameService::finish_game(game_id) -> Result<GameResult>`:
+  - [x] Log winner with `tracing::info!`
+- [x] Create `GameError` enum with thiserror derives:
+  - [x] Variants: GameNotFound, PlayerNotInGame, PlayerAlreadyBusted, InvalidPlayerCount, InvalidEmail, DeckEmpty, GameAlreadyFinished
 
 ### Acceptance Criteria
 
-- Service handles concurrent access safely with Arc/Mutex
-- All operations properly instrumented with tracing
-- Configuration loaded from environment variables
-- SQL migrations documented for future implementation
-- Comprehensive error types with descriptive messages
+- ✅ Service handles concurrent access safely with Arc/Mutex
+- ✅ All operations properly instrumented with tracing
+- ✅ Configuration loaded from environment variables
+- ✅ SQL migrations documented for future implementation
+- ✅ Comprehensive error types with descriptive messages
 
 ---
 
