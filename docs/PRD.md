@@ -77,6 +77,11 @@ This document details the transformation of the CLI blackjack game into a produc
 - [x] Implement `Game::calculate_results() -> GameResult`:
   - [x] Based on `determine_winner` logic from main.rs lines 138-167
   - [x] Handle single winner, ties, all-bust scenarios
+- [x] Document all public structs, methods and functions:
+  - [x] Add comprehensive doc comments with examples
+  - [x] Document struct fields and their purposes
+  - [x] Include usage examples for key methods
+  - [x] Add inline comments for complex logic
 
 ### Acceptance Criteria
 
@@ -147,6 +152,12 @@ This document details the transformation of the CLI blackjack game into a produc
   - [x] Log winner with `tracing::info!`
 - [x] Create `GameError` enum with thiserror derives:
   - [x] Variants: GameNotFound, PlayerNotInGame, PlayerAlreadyBusted, InvalidPlayerCount, InvalidEmail, DeckEmpty, GameAlreadyFinished
+- [x] Document all service layer code:
+  - [x] Add module-level documentation explaining service architecture
+  - [x] Document ServiceConfig and GameService structs
+  - [x] Add doc comments to all public methods with examples
+  - [x] Document error types and when they occur
+  - [x] Include inline comments for concurrency patterns
 
 ### Acceptance Criteria
 
@@ -222,6 +233,14 @@ This document details the transformation of the CLI blackjack game into a produc
 - [x] Create `version_deprecation_middleware`:
   - [x] Add headers `X-API-Deprecated`, `X-API-Sunset-Date`
   - [x] Calculate sunset date from `config.api.version_deprecation_months`
+- [x] Document all API infrastructure code:
+  - [x] Add comprehensive module documentation (config.rs, error.rs, auth.rs, rate_limiter.rs, middleware.rs, handlers.rs, lib.rs, main.rs)
+  - [x] Document configuration loading and environment variable precedence
+  - [x] Add examples for middleware usage and chaining
+  - [x] Document error handling patterns and ApiError structure
+  - [x] Include authentication flow documentation
+  - [x] Document rate limiting algorithm and implementation
+  - [x] Add startup sequence documentation in main.rs
 
 ### Acceptance Criteria
 
@@ -308,6 +327,14 @@ This document details the transformation of the CLI blackjack game into a produc
 - [ ] Configure server:
   - [ ] Bind to `config.server.host:config.server.port`
   - [ ] Default port 8080
+- [ ] Document all REST endpoints and handlers:
+  - [ ] Add module documentation for handlers module
+  - [ ] Document each endpoint handler with request/response examples
+  - [ ] Include authentication requirements in doc comments
+  - [ ] Document error scenarios for each endpoint
+  - [ ] Add examples of successful and failed requests
+  - [ ] Document WebSocket blueprint thoroughly
+  - [ ] Include CORS configuration documentation
 
 ### Acceptance Criteria
 
@@ -369,6 +396,18 @@ This document details the transformation of the CLI blackjack game into a produc
   - [ ] `target/`
   - [ ] `*.log`
   - [ ] `.env`
+
+#### Code Documentation Review
+- [ ] Review and validate all inline documentation:
+  - [ ] Ensure all public APIs have doc comments
+  - [ ] Verify all examples in doc comments are correct
+  - [ ] Check that complex algorithms have inline explanations
+  - [ ] Validate that error types are well documented
+  - [ ] Ensure module-level docs explain architecture
+- [ ] Generate and review `cargo doc` output:
+  - [ ] Fix any broken links in documentation
+  - [ ] Ensure examples compile and run
+  - [ ] Verify documentation coverage is comprehensive
 
 #### Documentation
 - [ ] Create `README.md` with sections:
