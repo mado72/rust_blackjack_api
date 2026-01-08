@@ -111,7 +111,7 @@ impl RateLimiter {
         let now = Instant::now();
         let one_minute_ago = now - std::time::Duration::from_secs(60);
 
-        let player_requests = requests.entry(key.to_string()).or_insert_with(VecDeque::new);
+        let player_requests = requests.entry(key.to_string()).or_default();
 
         // Remove requests older than 1 minute (sliding window)
         while let Some(&first) = player_requests.front() {

@@ -71,12 +71,8 @@ impl Player {
         for card in &self.cards_history {
             self.points += card.value;
             // Add 10 extra points if this Ace is counted as 11
-            if card.name == "A" {
-                if let Some(&is_eleven) = self.ace_values.get(&card.id) {
-                    if is_eleven {
-                        self.points += 10;
-                    }
-                }
+            if card.name == "A" && let Some(&is_eleven) = self.ace_values.get(&card.id) && is_eleven {
+                self.points += 10;
             }
         }
         self.busted = self.points > 21;

@@ -108,15 +108,14 @@ fn play_game_round() -> u8 {
         let drawn_card = CARDS[random_index].0;
         println!("You got the card: {}", drawn_card);
         // Removes the card from the deck so it cannot be drawn again
-        let choosed = card_points_map.remove(&drawn_card.to_string());
+        let choosed = card_points_map.remove(drawn_card as &str);
 
         if let Some(value) = choosed {
             // Special logic for the Ace: allows choosing between 1 or 11 points
-            if drawn_card == "A" {                
-                if prompt_decision("You have an Ace! Do you want it to count as 11 points instead of 1?") {
+            if drawn_card == "A"
+                && prompt_decision("You have an Ace! Do you want it to count as 11 points instead of 1?") {
                     points += 10; // Adds 10 extra points (1 + 10 = 11)
                 }
-            }
             points += value;
         }   
         println!("Your current points: {}", points);
