@@ -42,8 +42,8 @@ function Invoke-ApiTest {
         $statusCode = $_.Exception.Response.StatusCode.value__
         Write-Host "  ✗ Erro: $statusCode" -ForegroundColor Red
         if ($_.ErrorDetails.Message) {
-            $error = $_.ErrorDetails.Message | ConvertFrom-Json
-            Write-Host "    $($error.message)" -ForegroundColor Red
+            $err = $_.ErrorDetails.Message | ConvertFrom-Json
+            Write-Host "    $($err.message)" -ForegroundColor Red
         }
         return $null
     }
