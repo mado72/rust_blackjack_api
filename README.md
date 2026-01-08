@@ -945,16 +945,16 @@ rust_blackjack/
 
 ### Development Roadmap
 
-See [PRD.md](docs/PRD.md) for the complete 6-phase implementation plan:
+See [PRD.md](docs/PRD.md) for the complete 6-milestone implementation plan:
 
-1. **Phase 1**: Workspace Configuration and CI/CD
-2. **Phase 2**: Core Crate (game logic)
-3. **Phase 3**: Service Crate (state management)
-4. **Phase 4**: API Crate (authentication & config)
-5. **Phase 5**: REST Endpoints & Health Checks
-6. **Phase 6**: Tests, Documentation & Docker
+1. **Milestone 1**: Workspace Configuration and CI/CD
+2. **Milestone 2**: Core Crate (game logic)
+3. **Milestone 3**: Service Crate (state management)
+4. **Milestone 4**: API Crate (authentication & config)
+5. **Milestone 5**: REST Endpoints & Health Checks
+6. **Milestone 6**: Tests, Documentation & Docker
 
-**Status**: Currently in Planning Phase (v1.0.0)
+**Status**: Currently in Planning Milestone (v1.0.0)
 
 ## Contributing
 
