@@ -1,111 +1,114 @@
-# 🧪 Recursos de Teste da API Blackjack
+# 🧪 Blackjack API Testing Resources
 
-Esta pasta contém todos os recursos necessários para testar a API Blackjack Multi-Player.
+This folder contains all necessary resources to test the Blackjack Multi-Player API.
 
-## ⚠️ Status M7 - Janeiro 2026
+## ✅ M7 Status - January 2026 - COMPLETE!
 
-**Importante:** O Milestone 7 (Turn-Based, Users, Invitations) tem infraestrutura backend completa, mas **nenhum endpoint HTTP está disponível ainda**. Todos os testes e documentação abaixo referem-se aos endpoints M6 que estão **totalmente funcionais**.
+**Milestone 7 (Turn-Based, Users, Invitations) is fully implemented!**
+- ✅ Complete backend infrastructure
+- ✅ All 16 HTTP endpoints available (9 M6 + 7 M7)
+- ✅ Testable with Postman, cURL, and scripts
 
-Veja [M7_CHANGES.md](M7_CHANGES.md) para detalhes sobre recursos pendentes.
+See [M7_CHANGES.md](M7_CHANGES.md) for implementation details.
 
-## 📦 Arquivos Disponíveis
+## 📦 Available Files
 
-### Coleções Postman
-- **Blackjack_API.postman_collection.json** - Coleção completa com 13 endpoints
-- **Blackjack_API_Local.postman_environment.json** - Environment com variáveis pré-configuradas
+### Postman Collections
+- **Blackjack_API.postman_collection.json** - Complete collection with 13 endpoints
+- **Blackjack_API_Local.postman_environment.json** - Environment with pre-configured variables
 
-### Guias de Uso
-- **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** - 📊 Status M6 vs M7 (O que funciona?)
-- **[POSTMAN_GUIDE.md](POSTMAN_GUIDE.md)** - Tutorial completo do Postman (1.100+ linhas)
-- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Referência rápida para consulta (350+ linhas)
-- **[CURL_EXAMPLES.md](CURL_EXAMPLES.md)** - Exemplos prontos com cURL (450+ linhas)
-- **[API_TESTING_INDEX.md](API_TESTING_INDEX.md)** - Índice navegável de todos os recursos
-- **[M7_CHANGES.md](M7_CHANGES.md)** - ⚠️ Documentação do Milestone 7 (backend only)
+### Usage Guides
+- **[IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)** - 📊 M6 vs M7 Status (What works?)
+- **[POSTMAN_GUIDE.md](POSTMAN_GUIDE.md)** - Complete Postman tutorial (1,100+ lines)
+- **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick reference guide (350+ lines)
+- **[CURL_EXAMPLES.md](CURL_EXAMPLES.md)** - Ready-to-use cURL examples (450+ lines)
+- **[API_TESTING_INDEX.md](API_TESTING_INDEX.md)** - Navigable index of all resources
+- **[M7_CHANGES.md](M7_CHANGES.md)** - ⚠️ Milestone 7 documentation
 
-### Ferramentas de Teste
-- **api_tests.http** - Arquivo para VS Code REST Client extension
-- **test_api.ps1** - Script PowerShell para testes automatizados
+### Testing Tools
+- **api_tests.http** - File for VS Code REST Client extension
+- **test_api.ps1** - PowerShell script for automated testing
 
-## 🚀 Início Rápido
+## 🚀 Quick Start
 
-### Opção 1: Postman (Recomendado)
-1. Abra o Postman
-2. Import → Selecione `Blackjack_API.postman_collection.json` e `Blackjack_API_Local.postman_environment.json`
-3. Selecione o environment "Blackjack API - Local"
-4. Comece com: **Health Check** → **Create Game** → **Login** → **Draw Card**
+### Option 1: Postman (Recommended)
+1. Open Postman
+2. Import → Select `Blackjack_API.postman_collection.json` and `Blackjack_API_Local.postman_environment.json`
+3. Select environment "Blackjack API - Local"
+4. Start with: **Health Check** → **Create Game** → **Login** → **Draw Card**
 
-📖 [Ver guia completo](POSTMAN_GUIDE.md)
+📖 [See complete guide](POSTMAN_GUIDE.md)
 
-### Opção 2: VS Code
-1. Instale a extensão **REST Client**
-2. Abra `api_tests.http`
-3. Click "Send Request" acima de cada endpoint
+### Option 2: VS Code
+1. Install extension **REST Client**
+2. Open `api_tests.http`
+3. Click "Send Request" above each endpoint
 
-### Opção 3: Testes Automatizados
+### Option 3: Automated Testing
 ```powershell
 .\test_api.ps1
 ```
 
-### Opção 4: cURL
-Consulte [CURL_EXAMPLES.md](CURL_EXAMPLES.md) para exemplos prontos.
+### Option 4: cURL
+See [CURL_EXAMPLES.md](CURL_EXAMPLES.md) for ready-to-use examples.
 
-## 📚 Documentação
+## 📚 Documentation
 
-### Para Iniciantes
-1. Comece com [QUICK_REFERENCE.md](QUICK_REFERENCE.md) para visão geral
-2. Leia [POSTMAN_GUIDE.md](POSTMAN_GUIDE.md) para tutorial passo a passo
-3. Use a coleção Postman para testes interativos
+### For Beginners
+1. Start with [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for overview
+2. Read [POSTMAN_GUIDE.md](POSTMAN_GUIDE.md) for step-by-step tutorial
+3. Use Postman collection for interactive testing
 
-### Para Desenvolvedores Experientes
-- Use [api_tests.http](api_tests.http) para testes rápidos
-- Execute [test_api.ps1](test_api.ps1) para suite completa
-- Consulte [CURL_EXAMPLES.md](CURL_EXAMPLES.md) para scripts
+### For Experienced Developers
+- Use [api_tests.http](api_tests.http) for quick tests
+- Run [test_api.ps1](test_api.ps1) for complete suite
+- Consult [CURL_EXAMPLES.md](CURL_EXAMPLES.md) for scripts
 
-### Navegação Completa
-Veja [API_TESTING_INDEX.md](API_TESTING_INDEX.md) para um índice completo com tutoriais por cenário.
+### Complete Navigation
+See [API_TESTING_INDEX.md](API_TESTING_INDEX.md) for a complete index with scenario-based tutorials.
 
-## ✨ Features Automáticas
+## ✨ Automatic Features
 
-Todas as ferramentas incluem:
-- ✅ Gerenciamento automático de JWT tokens
-- ✅ Salvamento automático de game_id
-- ✅ Salvamento automático de card_id (para Ases)
-- ✅ Documentação inline completa
-- ✅ Exemplos de testes de erro
-- ✅ Scripts de validação
+All tools include:
+- ✅ Automatic JWT token management
+- ✅ Automatic game_id saving
+- ✅ Automatic card_id saving (for Aces)
+- ✅ Complete inline documentation
+- ✅ Error test examples
+- ✅ Validation scripts
 
-## 🔗 Links Úteis
+## 🔗 Useful Links
 
-- [Documentação Principal](../../README.md)
+- [Main Documentation](../../README.md)
 - [Product Requirements Document](../PRD.md)
-- [Código Fonte da API](../../crates/blackjack-api/)
+- [API Source Code](../../crates/blackjack-api/)
 
-## 📊 Matriz de Escolha de Ferramenta
+## 📊 Tool Selection Matrix
 
-| Situação | Ferramenta Recomendada | Arquivo |
-|----------|------------------------|---------|
-| Primeiro teste | Postman | `Blackjack_API.postman_collection.json` |
-| Desenvolvimento ativo | VS Code REST Client | `api_tests.http` |
-| Testes automatizados | PowerShell Script | `test_api.ps1` |
+| Situation | Recommended Tool | File |
+|----------|------------------------|------|
+| First test | Postman | `Blackjack_API.postman_collection.json` |
+| Active development | VS Code REST Client | `api_tests.http` |
+| Automated testing | PowerShell Script | `test_api.ps1` |
 | CI/CD / Scripts | cURL | `CURL_EXAMPLES.md` |
-| Aprendendo a API | Postman Guide | `POSTMAN_GUIDE.md` |
-| Consulta rápida | Quick Reference | `QUICK_REFERENCE.md` |
+| Learning the API | Postman Guide | `POSTMAN_GUIDE.md` |
+| Quick reference | Quick Reference | `QUICK_REFERENCE.md` |
 
-## 🆘 Precisa de Ajuda?
+## 🆘 Need Help?
 
-1. **Problemas com Postman?** → [POSTMAN_GUIDE.md - Troubleshooting](POSTMAN_GUIDE.md#-troubleshooting)
-2. **Erros comuns?** → [QUICK_REFERENCE.md - Erros Comuns](QUICK_REFERENCE.md#️-erros-comuns)
-3. **Visão geral de tudo?** → [API_TESTING_INDEX.md](API_TESTING_INDEX.md)
+1. **Postman issues?** → [POSTMAN_GUIDE.md - Troubleshooting](POSTMAN_GUIDE.md#-troubleshooting)
+2. **Common errors?** → [QUICK_REFERENCE.md - Common Errors](QUICK_REFERENCE.md#️-common-errors)
+3. **Complete overview?** → [API_TESTING_INDEX.md](API_TESTING_INDEX.md)
 
-## 📝 Nota
+## 📝 Note
 
-Certifique-se de que o servidor está rodando antes de testar:
+Make sure the server is running before testing:
 ```bash
 cargo run -p blackjack-api
-# Servidor: http://localhost:8080
+# Server: http://localhost:8080
 ```
 
 ---
 
-**Última atualização**: Janeiro 2026  
-**Versão da API**: 1.0.0
+**Last updated**: January 2026  
+**API Version**: 1.0.0

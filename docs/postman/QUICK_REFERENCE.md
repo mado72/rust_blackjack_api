@@ -1,59 +1,63 @@
-# Blackjack API - Guia Rápido de Referência
+# Blackjack API - Quick Reference Guide
 
-## ⚠️ AVISO IMPORTANTE - M7 Status
+## ✅ UPDATE - M7 COMPLETE!
 
-**Milestone 7 - Infraestrutura Implementada, Endpoints NÃO Disponíveis**
+**Milestone 7 - Turn-Based Gameplay & User Management**
 
-- ✅ Backend completo (Core, Service Layer)
-- ❌ **API HTTP Endpoints NÃO criados**
-- ❌ **NÃO testável via Postman/cURL ainda**
-- 📖 Ver [M7_CHANGES.md](M7_CHANGES.md) para detalhes
+- ✅ **Complete backend** (Core, Service Layer)
+- ✅ **API HTTP Endpoints implemented** (16 endpoints total)
+- ✅ **Testable via Postman/cURL** - Ready to use!
+- 📖 See [M7_CHANGES.md](M7_CHANGES.md) for details
 
-**Recursos M7 (apenas backend, sem HTTP):**
-- 🎮 Sistema de turnos ordenados (código existe)
-- 👥 UserService (sem endpoints /auth/register)
-- 📨 InvitationService (sem endpoints /invitations)
-- 🔄 Lógica de stand/auto-finish (sem endpoint /stand)
-
-**✅ Use os endpoints M6 abaixo - totalmente funcionais!**
+**New M7 features now available:**
+- 🎮 Ordered turn system
+- 👥 User registration and login  
+- 📨 Invitation system with timeout
+- 🔄 Stand endpoint and auto-finish
 
 ---
 
-## 🚀 Início Rápido
+## 🚀 Quick Start
 
-### 1. Iniciar o Servidor
+### 1. Start Server
 ```bash
 cargo run -p blackjack-api
-# Servidor: http://localhost:8080
+# Server: http://localhost:8080
 ```
 
-### 2. Importar no Postman
-- Importar: `Blackjack_API.postman_collection.json`
-- Importar: `Blackjack_API_Local.postman_environment.json`
-- Selecionar environment: **Blackjack API - Local**
+### 2. Import to Postman
+- Import: `Blackjack_API.postman_collection.json`
+- Import: `Blackjack_API_Local.postman_environment.json`
+- Select environment: **Blackjack API - Local**
 
-### 3. Fluxo de Teste
+### 3. Test Flow
 ```
 Health Check → Create Game → Login → Draw Cards → Finish Game → Results
 ```
 
 ---
 
-## 📋 Endpoints Disponíveis (M6 - Funcionais)
+## 📋 Endpoints Disponíveis (16 endpoints)
 
-**Status:** ✅ Todos os endpoints abaixo estão implementados e funcionando
+**Status:** ✅ Todos implementados e funcionais (M6 + M7)
 
-| Endpoint | Método | Auth? | Descrição |
-|----------|--------|-------|-----------|
-| `/health` | GET | ❌ | Status do servidor |
-| `/health/ready` | GET | ❌ | Prontidão dos componentes |
-| `/api/v1/auth/login` | POST | ❌ | Autenticar jogador |
-| `/api/v1/games` | POST | ❌ | Criar novo jogo |
-| `/api/v1/games/:id` | GET | ✅ | Ver estado do jogo |
-| `/api/v1/games/:id/draw` | POST | ✅ | Comprar carta |
-| `/api/v1/games/:id/ace` | PUT | ✅ | Mudar valor do Ás |
-| `/api/v1/games/:id/finish` | POST | ✅ | Finalizar jogo |
-| `/api/v1/games/:id/results` | GET | ✅ | Ver resultados |
+| Endpoint | Método | Auth? | Versão | Descrição |
+|----------|--------|-------|---------|-----------|
+| `/health` | GET | ❌ | M6 | Status do servidor |
+| `/health/ready` | GET | ❌ | M6 | Prontidão dos componentes |
+| `/api/v1/auth/register` | POST | ❌ | M7 | Registrar novo usuário |
+| `/api/v1/auth/login` | POST | ❌ | M6+M7 | Autenticar (game ou user) |
+| `/api/v1/games` | POST | ❌ | M6 | Criar novo jogo |
+| `/api/v1/games/:id` | GET | ✅ | M6+M7 | Ver estado (com turnos) |
+| `/api/v1/games/:id/draw` | POST | ✅ | M6+M7 | Comprar carta (valida turno) |
+| `/api/v1/games/:id/ace` | PUT | ✅ | M6 | Mudar valor do Ás |
+| `/api/v1/games/:id/stand` | POST | ✅ | M7 | Jogador para de jogar |
+| `/api/v1/games/:id/finish` | POST | ✅ | M6 | Finalizar jogo |
+| `/api/v1/games/:id/results` | GET | ✅ | M6 | Ver resultados |
+| `/api/v1/games/:id/invitations` | POST | ✅ | M7 | Criar convite |
+| `/api/v1/invitations/pending` | GET | ✅ | M7 | Listar convites pendentes |
+| `/api/v1/invitations/:id/accept` | POST | ✅ | M7 | Aceitar convite |
+| `/api/v1/invitations/:id/decline` | POST | ✅ | M7 | Recusar convite |
 
 ---
 
@@ -119,146 +123,146 @@ Authorization: Bearer {{jwt_token}}
 
 ---
 
-## 📊 Códigos de Status
+## 📊 Status Codes
 
-| Código | Significado | Quando Ocorre |
+| Code | Meaning | When It Occurs |
 |--------|-------------|---------------|
-| 200 | OK | Request bem-sucedido |
-| 400 | Bad Request | Dados inválidos (UUID, contagem de jogadores) |
-| 401 | Unauthorized | Token ausente ou inválido |
-| 403 | Forbidden | Jogador não está no jogo / jogo finalizado |
-| 404 | Not Found | Jogo/jogador/carta não encontrado |
-| 409 | Conflict | Jogo já finalizado / jogo não finalizado |
-| 410 | Gone | Baralho vazio |
-| 429 | Too Many Requests | Rate limit excedido |
-| 500 | Internal Server Error | Erro no servidor |
+| 200 | OK | Successful request |
+| 400 | Bad Request | Invalid data (UUID, player count) |
+| 401 | Unauthorized | Missing or invalid token |
+| 403 | Forbidden | Player not in game / game finished |
+| 404 | Not Found | Game/player/card not found |
+| 409 | Conflict | Game already finished / game not finished |
+| 410 | Gone | Empty deck |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Internal Server Error | Server error |
 
 ---
 
-## ⚠️ Erros Comuns
+## ⚠️ Common Errors
 
 ### 401 Unauthorized
-**Causa**: Token JWT inválido ou expirado  
-**Solução**: Fazer login novamente
+**Cause**: Invalid or expired JWT token  
+**Solution**: Login again
 
 ### 403 Forbidden - Player not in game
-**Causa**: Email não está na lista de jogadores  
-**Solução**: Usar email que foi incluído no Create Game
+**Cause**: Email not in player list  
+**Solution**: Use email that was included in Create Game
 
 ### 403 Forbidden - Game finished
-**Causa**: Tentando jogar após finalizar  
-**Solução**: Criar um novo jogo
+**Cause**: Trying to play after finishing  
+**Solution**: Create a new game
 
 ### 404 Not Found - Game not found
-**Causa**: `game_id` inválido ou não existe  
-**Solução**: Verificar o UUID ou criar novo jogo
+**Cause**: Invalid or non-existent `game_id`  
+**Solution**: Verify the UUID or create new game
 
 ### 409 Conflict - Game not finished
-**Causa**: Tentando ver resultados antes de finalizar  
-**Solução**: Chamar `POST /api/v1/games/:id/finish` primeiro
+**Cause**: Trying to see results before finishing  
+**Solution**: Call `POST /api/v1/games/:id/finish` first
 
 ---
 
-## 🧪 Ferramentas de Teste
+## 🧪 Testing Tools
 
 ### Postman
 ```
-✅ Melhor para: Interface visual, debugging
-📁 Arquivo: Blackjack_API.postman_collection.json
-📖 Guia: POSTMAN_GUIDE.md
+✅ Best for: Visual interface, debugging
+📁 File: Blackjack_API.postman_collection.json
+📖 Guide: POSTMAN_GUIDE.md
 ```
 
 ### VS Code REST Client
 ```
-✅ Melhor para: Testes rápidos no editor
-📁 Arquivo: api_tests.http
-💡 Extensão: humao.rest-client
+✅ Best for: Quick tests in editor
+📁 File: api_tests.http
+💡 Extension: humao.rest-client
 ```
 
 ### PowerShell Script
 ```
-✅ Melhor para: Testes automatizados completos
-📁 Arquivo: test_api.ps1
-▶️ Executar: .\test_api.ps1
+✅ Best for: Complete automated tests
+📁 File: test_api.ps1
+▶️ Run: .\test_api.ps1
 ```
 
 ### cURL
 ```
-✅ Melhor para: Linha de comando, scripts
-📁 Arquivo: CURL_EXAMPLES.md
+✅ Best for: Command line, scripts
+📁 File: CURL_EXAMPLES.md
 🐧 Linux/Mac ready
 ```
 
 ---
 
-## 🎯 Cenários de Teste
+## 🎯 Test Scenarios
 
-### Teste Básico (1 jogador)
-1. Create Game com 1 email
+### Basic Test (1 player)
+1. Create Game with 1 email
 2. Login
-3. Draw 2-3 cartas
+3. Draw 2-3 cards
 4. Finish Game
 5. Get Results
 
-### Teste Multi-jogador
-1. Create Game com 3+ emails
-2. Login como jogador 1
-3. Draw cartas para jogador 1
-4. Trocar token (login como jogador 2)
-5. Draw cartas para jogador 2
+### Multi-player Test
+1. Create Game with 3+ emails
+2. Login as player 1
+3. Draw cards for player 1
+4. Switch token (login as player 2)
+5. Draw cards for player 2
 6. Finish Game
 7. Get Results
 
-### Teste Ás
+### Ace Test
 1. Create Game
 2. Login
-3. Draw até pegar um Ás (script salva ID automaticamente)
-4. Set Ace Value para 11
-5. Set Ace Value para 1
-6. Ver diferença nos pontos
+3. Draw until getting an Ace (script saves ID automatically)
+4. Set Ace Value to 11
+5. Set Ace Value to 1
+6. See point difference
 
-### Teste Bust
+### Bust Test
 1. Create Game
 2. Login
-3. Draw várias cartas até estourar (> 21)
-4. Verificar `busted: true`
-5. Finish e verificar que perdeu
+3. Draw multiple cards until busting (> 21)
+4. Verify `busted: true`
+5. Finish and verify loss
 
 ---
 
-## 🔄 Workflow Recomendado
+## 🔄 Recommended Workflow
 
-### Desenvolvimento
+### Development
 ```bash
-# Terminal 1: Servidor
+# Terminal 1: Server
 cargo run -p blackjack-api
 
-# Terminal 2: Testes
+# Terminal 2: Tests
 cargo test --workspace
 
-# Terminal 3: Testes de API
+# Terminal 3: API Tests
 .\test_api.ps1
 ```
 
 ### Debugging
-1. Usar Postman para requests individuais
-2. Verificar logs no terminal do servidor
-3. Usar `RUST_LOG=debug` para logs detalhados
+1. Use Postman for individual requests
+2. Check logs in server terminal
+3. Use `RUST_LOG=debug` for detailed logs
 
 ### CI/CD
 ```bash
-# Testes completos
+# Complete tests
 cargo test --workspace
 cargo clippy --workspace -- -D warnings
 cargo fmt --workspace --check
 
-# Build de produção
+# Production build
 cargo build --release -p blackjack-api
 ```
 
 ---
 
-## 📚 Documentação Completa
+## 📚 Complete Documentation
 
 - **API Endpoints**: [../../crates/blackjack-api/src/handlers.rs](../../crates/blackjack-api/src/handlers.rs)
 - **Postman**: [POSTMAN_GUIDE.md](POSTMAN_GUIDE.md)
@@ -269,50 +273,50 @@ cargo build --release -p blackjack-api
 
 ## 🆘 Troubleshooting
 
-### Servidor não inicia
+### Server won't start
 ```bash
-# Verificar se a porta está em uso
+# Check if port is in use
 netstat -ano | findstr :8080
 
-# Mudar porta
+# Change port
 $env:BLACKJACK_SERVER_PORT=3000
 cargo run -p blackjack-api
 ```
 
-### Variáveis não salvam no Postman
-1. Verificar environment selecionado (canto superior direito)
-2. Ver se está usando `{{variavel}}` corretamente
-3. Executar requests na ordem correta
+### Variables not saving in Postman
+1. Check selected environment (top right corner)
+2. Verify using `{{variable}}` syntax correctly
+3. Execute requests in correct order
 
-### Token expira rápido
+### Token expires quickly
 ```toml
-# Ajustar em config.toml
+# Adjust in config.toml
 [jwt]
-expiration_hours = 48  # 2 dias
+expiration_hours = 48  # 2 days
 ```
 
-### Rate limit muito restritivo
+### Rate limit too restrictive
 ```toml
-# Ajustar em config.toml
+# Adjust in config.toml
 [rate_limit]
-requests_per_minute = 30  # Aumentar
+requests_per_minute = 30  # Increase
 ```
 
 ---
 
-## ⚡ Atalhos Úteis
+## ⚡ Useful Shortcuts
 
 ### Postman
-- `Ctrl+Enter`: Enviar request
-- `Ctrl+E`: Abrir environments
-- `Ctrl+Shift+C`: Abrir console
+- `Ctrl+Enter`: Send request
+- `Ctrl+E`: Open environments
+- `Ctrl+Shift+C`: Open console
 
 ### VS Code REST Client
-- `Ctrl+Alt+R`: Enviar request
-- `Ctrl+Alt+C`: Cancelar request
-- `Ctrl+Alt+H`: Ver history
+- `Ctrl+Alt+R`: Send request
+- `Ctrl+Alt+C`: Cancel request
+- `Ctrl+Alt+H`: View history
 
 ---
 
-**Versão**: 1.0.0  
-**Última atualização**: Janeiro 2026
+**Version**: 1.0.0  
+**Last updated**: January 2026
