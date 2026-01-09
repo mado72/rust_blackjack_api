@@ -276,6 +276,37 @@ impl From<blackjack_service::GameError> for ApiError {
             GameError::GameAlreadyFinished => {
                 Self::new(StatusCode::BAD_REQUEST, "GAME_FINISHED", "Game has already finished")
             }
+            GameError::UserNotFound => {
+                Self::new(StatusCode::NOT_FOUND, "USER_NOT_FOUND", "User not found")
+            }
+            GameError::UserAlreadyExists => {
+                Self::new(StatusCode::CONFLICT, "USER_EXISTS", "User already exists")
+            }
+            GameError::InvalidCredentials => {
+                Self::unauthorized()
+            }
+            GameError::InvitationNotFound => {
+                Self::new(StatusCode::NOT_FOUND, "INVITATION_NOT_FOUND", "Invitation not found")
+            }
+            GameError::InvitationExpired => {
+                Self::new(StatusCode::GONE, "INVITATION_EXPIRED", "Invitation has expired")
+            }
+            GameError::InvalidTimeout { max } => {
+                Self::new(
+                    StatusCode::BAD_REQUEST,
+                    "INVALID_TIMEOUT",
+                    format!("Timeout exceeds maximum of {} seconds", max),
+                )
+            }
+            GameError::NotPlayerTurn => {
+                Self::new(StatusCode::FORBIDDEN, "NOT_YOUR_TURN", "It's not your turn")
+            }
+            GameError::PlayerNotActive => {
+                Self::new(StatusCode::FORBIDDEN, "PLAYER_NOT_ACTIVE", "Player is not active")
+            }
+            GameError::NotGameCreator => {
+                Self::new(StatusCode::FORBIDDEN, "NOT_GAME_CREATOR", "Only the game creator can perform this action")
+            }
             GameError::CoreError(core_err) => {
                 Self::new(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", core_err.to_string())
             }
