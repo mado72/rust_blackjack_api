@@ -1,14 +1,20 @@
 use blackjack_core::{Game, GameError};
+use uuid::Uuid;
+
+// Helper function to create a test creator_id
+fn test_creator_id() -> Uuid {
+    Uuid::new_v4()
+}
 
 #[test]
 fn test_deck_has_52_cards() {
-    let game = Game::new(vec!["player1@test.com".to_string()]).unwrap();
+    let game = Game::new(test_creator_id(), vec!["player1@test.com".to_string()]).unwrap();
     assert_eq!(game.available_cards.len(), 52, "Deck should have exactly 52 cards");
 }
 
 #[test]
 fn test_four_cards_of_each_type() {
-    let game = Game::new(vec!["player1@test.com".to_string()]).unwrap();
+    let game = Game::new(test_creator_id(), vec!["player1@test.com".to_string()]).unwrap();
     
     // Count cards by name
     let card_types = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
@@ -20,7 +26,7 @@ fn test_four_cards_of_each_type() {
 
 #[test]
 fn test_cards_have_correct_suits() {
-    let game = Game::new(vec!["player1@test.com".to_string()]).unwrap();
+    let game = Game::new(test_creator_id(), vec!["player1@test.com".to_string()]).unwrap();
     
     let suits = ["Hearts", "Diamonds", "Clubs", "Spades"];
     for suit in suits.iter() {
@@ -31,9 +37,9 @@ fn test_cards_have_correct_suits() {
 
 #[test]
 fn test_deck_exhaustion() {
-    let mut game = Game::new(vec!["player1@test.com".to_string()]).unwrap();
+    let mut game = Game::new(test_creator_id(), vec!["player1@test.com".to_string()]).unwrap();
     
-    // Draw all 52 cards, but player will bust before that
+    // Draw cards until player busts or game finishes
     let mut cards_drawn = 0;
     loop {
         let result = game.draw_card("player1@test.com");
@@ -47,6 +53,10 @@ fn test_deck_exhaustion() {
                 // Deck is empty
                 break;
             }
+            Err(GameError::GameAlreadyFinished) => {
+                // Game finished (auto-finish after player busts)
+                break;
+            }
             Err(e) => panic!("Unexpected error: {:?}", e),
         }
         
@@ -55,17 +65,11 @@ fn test_deck_exhaustion() {
         }
     }
     
-    // Now try to draw when deck might be empty or player is busted
-    // Force deck to be empty by creating a new game and manually emptying it
-    let mut game2 = Game::new(vec!["player1@test.com".to_string(), "player2@test.com".to_string()]).unwrap();
+    // Verify we can create a game and test DeckEmpty by manually emptying deck
+    let mut game2 = Game::new(test_creator_id(), vec!["player1@test.com".to_string()]).unwrap();
     
-    // Manually set player2 as not busted and draw all cards
-    for _ in 0..52 {
-        if game2.available_cards.is_empty() {
-            break;
-        }
-        let _ = game2.available_cards.pop();
-    }
+    // Manually empty the deck
+    game2.available_cards.clear();
     
     // Now try to draw from empty deck
     let result = game2.draw_card("player1@test.com");
@@ -74,7 +78,7 @@ fn test_deck_exhaustion() {
 
 #[test]
 fn test_ace_value_can_be_changed_multiple_times() {
-    let mut game = Game::new(vec!["player1@test.com".to_string()]).unwrap();
+    let mut game = Game::new(test_creator_id(), vec!["player1@test.com".to_string()]).unwrap();
     
     // Find an Ace in the deck and give it to the player
     let ace_index = game.available_cards.iter().position(|c| c.name == "A").expect("Should have an Ace in deck");
@@ -104,7 +108,7 @@ fn test_ace_value_can_be_changed_multiple_times() {
 
 #[test]
 fn test_game_finished_prevents_draw() {
-    let mut game = Game::new(vec!["player1@test.com".to_string()]).unwrap();
+    let mut game = Game::new(test_creator_id(), vec!["player1@test.com".to_string()]).unwrap();
     
     game.finish_game();
     
@@ -114,7 +118,7 @@ fn test_game_finished_prevents_draw() {
 
 #[test]
 fn test_game_finished_prevents_ace_change() {
-    let mut game = Game::new(vec!["player1@test.com".to_string()]).unwrap();
+    let mut game = Game::new(test_creator_id(), vec!["player1@test.com".to_string()]).unwrap();
     
     // Find an Ace and give it to the player
     let ace_index = game.available_cards.iter().position(|c| c.name == "A").expect("Should have an Ace in deck");
@@ -131,7 +135,7 @@ fn test_game_finished_prevents_ace_change() {
 
 #[test]
 fn test_json_serialization() {
-    let game = Game::new(vec!["player1@test.com".to_string()]).unwrap();
+    let game = Game::new(test_creator_id(), vec!["player1@test.com".to_string()]).unwrap();
     
     // Serialize to JSON
     let json = serde_json::to_string(&game).expect("Should serialize to JSON");
@@ -147,7 +151,7 @@ fn test_json_serialization() {
 
 #[test]
 fn test_calculate_results_single_winner() {
-    let mut game = Game::new(vec![
+    let mut game = Game::new(test_creator_id(), vec![
         "player1@test.com".to_string(),
         "player2@test.com".to_string(),
         "player3@test.com".to_string(),
@@ -168,7 +172,7 @@ fn test_calculate_results_single_winner() {
 
 #[test]
 fn test_calculate_results_tie() {
-    let mut game = Game::new(vec![
+    let mut game = Game::new(test_creator_id(), vec![
         "player1@test.com".to_string(),
         "player2@test.com".to_string(),
         "player3@test.com".to_string(),
@@ -190,7 +194,7 @@ fn test_calculate_results_tie() {
 
 #[test]
 fn test_calculate_results_all_bust() {
-    let mut game = Game::new(vec![
+    let mut game = Game::new(test_creator_id(), vec![
         "player1@test.com".to_string(),
         "player2@test.com".to_string(),
     ])
@@ -210,7 +214,7 @@ fn test_calculate_results_all_bust() {
 
 #[test]
 fn test_calculate_results_perfect_21() {
-    let mut game = Game::new(vec![
+    let mut game = Game::new(test_creator_id(), vec![
         "player1@test.com".to_string(),
         "player2@test.com".to_string(),
         "player3@test.com".to_string(),
@@ -229,7 +233,7 @@ fn test_calculate_results_perfect_21() {
 
 #[test]
 fn test_invalid_player_count_zero() {
-    let result = Game::new(vec![]);
+    let result = Game::new(test_creator_id(), vec![]);
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), GameError::InvalidPlayerCount));
 }
@@ -237,21 +241,21 @@ fn test_invalid_player_count_zero() {
 #[test]
 fn test_invalid_player_count_too_many() {
     let players: Vec<String> = (1..=11).map(|i| format!("player{}@test.com", i)).collect();
-    let result = Game::new(players);
+    let result = Game::new(test_creator_id(), players);
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), GameError::InvalidPlayerCount));
 }
 
 #[test]
 fn test_invalid_email_empty() {
-    let result = Game::new(vec!["".to_string()]);
+    let result = Game::new(test_creator_id(), vec!["".to_string()]);
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), GameError::InvalidEmail));
 }
 
 #[test]
 fn test_invalid_email_duplicate() {
-    let result = Game::new(vec![
+    let result = Game::new(test_creator_id(), vec![
         "player1@test.com".to_string(),
         "player1@test.com".to_string(),
     ]);
@@ -261,15 +265,16 @@ fn test_invalid_email_duplicate() {
 
 #[test]
 fn test_player_not_in_game() {
-    let mut game = Game::new(vec!["player1@test.com".to_string()]).unwrap();
+    let mut game = Game::new(test_creator_id(), vec!["player1@test.com".to_string()]).unwrap();
     
     let result = game.draw_card("nonexistent@test.com");
-    assert_eq!(result, Err(GameError::PlayerNotInGame));
+    // With turn management, it will return NotPlayerTurn before checking if player exists
+    assert_eq!(result, Err(GameError::NotPlayerTurn));
 }
 
 #[test]
 fn test_busted_player_cannot_draw() {
-    let mut game = Game::new(vec!["player1@test.com".to_string()]).unwrap();
+    let mut game = Game::new(test_creator_id(), vec!["player1@test.com".to_string()]).unwrap();
     
     // Manually set player as busted
     game.players.get_mut("player1@test.com").unwrap().busted = true;
@@ -282,7 +287,7 @@ fn test_busted_player_cannot_draw() {
 fn test_valid_player_range() {
     for count in 1..=10 {
         let players: Vec<String> = (1..=count).map(|i| format!("player{}@test.com", i)).collect();
-        let result = Game::new(players);
+        let result = Game::new(test_creator_id(), players);
         assert!(result.is_ok(), "Should accept {} players", count);
     }
 }

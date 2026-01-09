@@ -32,6 +32,93 @@ pub struct Card {
     pub suit: String,
 }
 
+/// Represents a user in the system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct User {
+    pub id: Uuid,
+    pub email: String,
+    pub password_hash: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
+}
+
+impl User {
+    /// Creates a new user with the given email and password hash
+    pub fn new(email: String, password_hash: String) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            email,
+            password_hash,
+            created_at: Some(chrono::Utc::now().to_rfc3339()),
+        }
+    }
+}
+
+/// Status of a game invitation
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum InvitationStatus {
+    Pending,
+    Accepted,
+    Declined,
+    Expired,
+}
+
+/// Represents a game invitation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GameInvitation {
+    pub id: Uuid,
+    pub game_id: Uuid,
+    pub inviter_email: String,
+    pub invitee_email: String,
+    pub status: InvitationStatus,
+    pub timeout_seconds: u64,
+    pub created_at: String,
+    pub expires_at: String,
+}
+
+impl GameInvitation {
+    /// Creates a new game invitation
+    pub fn new(
+        game_id: Uuid,
+        inviter_email: String,
+        invitee_email: String,
+        timeout_seconds: u64,
+    ) -> Self {
+        let created_at = chrono::Utc::now();
+        let expires_at = created_at + chrono::Duration::seconds(timeout_seconds as i64);
+
+        Self {
+            id: Uuid::new_v4(),
+            game_id,
+            inviter_email,
+            invitee_email,
+            status: InvitationStatus::Pending,
+            timeout_seconds,
+            created_at: created_at.to_rfc3339(),
+            expires_at: expires_at.to_rfc3339(),
+        }
+    }
+
+    /// Checks if the invitation has expired
+    pub fn is_expired(&self) -> bool {
+        let now = chrono::Utc::now();
+        match chrono::DateTime::parse_from_rfc3339(&self.expires_at) {
+            Ok(expires_at) => now > expires_at,
+            Err(_) => false,
+        }
+    }
+}
+
+/// State of a player in the game
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum PlayerState {
+    Active,
+    Standing,
+    Busted,
+}
+
 /// Represents a player in the game
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
@@ -41,6 +128,7 @@ pub struct Player {
     /// Maps card_id to is_eleven (true = 11 points, false = 1 point)
     pub ace_values: HashMap<Uuid, bool>,
     pub busted: bool,
+    pub state: PlayerState,
 }
 
 impl Player {
@@ -52,6 +140,7 @@ impl Player {
             cards_history: Vec::new(),
             ace_values: HashMap::new(),
             busted: false,
+            state: PlayerState::Active,
         }
     }
 
@@ -76,6 +165,9 @@ impl Player {
             }
         }
         self.busted = self.points > 21;
+        if self.busted {
+            self.state = PlayerState::Busted;
+        }
     }
 }
 
@@ -108,6 +200,8 @@ pub enum GameError {
     GameAlreadyFinished,
     CardNotFound,
     NotAnAce,
+    NotPlayerTurn,
+    PlayerNotActive,
 }
 
 impl std::fmt::Display for GameError {
@@ -122,6 +216,8 @@ impl std::fmt::Display for GameError {
             GameError::GameAlreadyFinished => write!(f, "Game has already finished"),
             GameError::CardNotFound => write!(f, "Card not found in player's hand"),
             GameError::NotAnAce => write!(f, "Can only change value of Ace cards"),
+            GameError::NotPlayerTurn => write!(f, "It's not this player's turn"),
+            GameError::PlayerNotActive => write!(f, "Player is not active (standing or busted)"),
         }
     }
 }
@@ -132,16 +228,19 @@ impl std::error::Error for GameError {}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Game {
     pub id: Uuid,
+    pub creator_id: Uuid,
     pub players: HashMap<String, Player>,
     pub available_cards: Vec<Card>,
     pub finished: bool,
+    pub turn_order: Vec<String>,
+    pub current_turn_index: usize,
 }
 
 impl Game {
-    /// Creates a new game with the specified players
+    /// Creates a new game with the specified creator and initial players
     #[tracing::instrument]
-    pub fn new(player_emails: Vec<String>) -> Result<Self, GameError> {
-        // Validate player count
+    pub fn new(creator_id: Uuid, player_emails: Vec<String>) -> Result<Self, GameError> {
+        // Validate player count (1-10)
         if player_emails.is_empty() || player_emails.len() > 10 {
             return Err(GameError::InvalidPlayerCount);
         }
@@ -172,15 +271,21 @@ impl Game {
 
         // Initialize players
         let mut players = HashMap::new();
-        for email in player_emails {
-            players.insert(email.clone(), Player::new(email));
+        for email in &player_emails {
+            players.insert(email.clone(), Player::new(email.clone()));
         }
+
+        // Set turn order
+        let turn_order = player_emails;
 
         Ok(Self {
             id: Uuid::new_v4(),
+            creator_id,
             players,
             available_cards,
             finished: false,
+            turn_order,
+            current_turn_index: 0,
         })
     }
 
@@ -195,10 +300,19 @@ impl Game {
             return Err(GameError::DeckEmpty);
         }
 
+        // Check if it's the player's turn
+        if !self.can_player_act(email) {
+            return Err(GameError::NotPlayerTurn);
+        }
+
         let player = self.players.get_mut(email).ok_or(GameError::PlayerNotInGame)?;
 
         if player.busted {
             return Err(GameError::PlayerAlreadyBusted);
+        }
+
+        if player.state != PlayerState::Active {
+            return Err(GameError::PlayerNotActive);
         }
 
         // Draw a random card from the deck
@@ -207,7 +321,123 @@ impl Game {
 
         player.add_card(card.clone());
 
+        // Advance turn after drawing
+        self.advance_turn();
+
+        // Check if game should auto-finish
+        if self.check_auto_finish() {
+            self.finished = true;
+        }
+
         Ok(card)
+    }
+
+    /// Adds a player to the game (from invitation acceptance)
+    pub fn add_player(&mut self, email: String) -> Result<(), GameError> {
+        if self.finished {
+            return Err(GameError::GameAlreadyFinished);
+        }
+
+        if self.players.contains_key(&email) {
+            return Err(GameError::InvalidEmail);
+        }
+
+        if self.players.len() >= 10 {
+            return Err(GameError::InvalidPlayerCount);
+        }
+
+        self.players.insert(email.clone(), Player::new(email.clone()));
+        self.turn_order.push(email);
+
+        Ok(())
+    }
+
+    /// Gets the email of the player whose turn it is
+    pub fn get_current_player(&self) -> Option<&str> {
+        if self.turn_order.is_empty() {
+            return None;
+        }
+        self.turn_order.get(self.current_turn_index).map(|s| s.as_str())
+    }
+
+    /// Advances to the next active player's turn
+    pub fn advance_turn(&mut self) {
+        if self.turn_order.is_empty() {
+            return;
+        }
+
+        let initial_index = self.current_turn_index;
+        loop {
+            self.current_turn_index = (self.current_turn_index + 1) % self.turn_order.len();
+            
+            // Check if we've gone full circle
+            if self.current_turn_index == initial_index {
+                break;
+            }
+
+            // Check if current player is active
+            if let Some(email) = self.turn_order.get(self.current_turn_index) {
+                if let Some(player) = self.players.get(email) {
+                    if player.state == PlayerState::Active {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Checks if the specified player can act (it's their turn and they're active)
+    pub fn can_player_act(&self, email: &str) -> bool {
+        if let Some(current_email) = self.get_current_player() {
+            if current_email == email {
+                if let Some(player) = self.players.get(email) {
+                    return player.state == PlayerState::Active;
+                }
+            }
+        }
+        false
+    }
+
+    /// Marks a player as standing (done playing)
+    #[tracing::instrument(skip(self))]
+    pub fn stand(&mut self, email: &str) -> Result<(), GameError> {
+        if self.finished {
+            return Err(GameError::GameAlreadyFinished);
+        }
+
+        // Check if it's the player's turn
+        if !self.can_player_act(email) {
+            return Err(GameError::NotPlayerTurn);
+        }
+
+        let player = self.players.get_mut(email).ok_or(GameError::PlayerNotInGame)?;
+
+        if player.state != PlayerState::Active {
+            return Err(GameError::PlayerNotActive);
+        }
+
+        player.state = PlayerState::Standing;
+
+        // Advance turn after standing
+        self.advance_turn();
+
+        // Check if game should auto-finish
+        if self.check_auto_finish() {
+            self.finished = true;
+        }
+
+        Ok(())
+    }
+
+    /// Checks if all players have finished playing (stood or busted)
+    pub fn check_auto_finish(&self) -> bool {
+        if self.players.is_empty() {
+            return false;
+        }
+
+        self.players.values().all(|player| {
+            player.state == PlayerState::Standing || player.state == PlayerState::Busted
+        })
     }
 
     /// Sets the value of an Ace card for a player
