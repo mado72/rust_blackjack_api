@@ -818,7 +818,7 @@ pub struct Claims {
 
 ### Next Steps
 
-See [docs/postman/M7_CHANGES.md](docs/postman/M7_CHANGES.md) for detailed implementation status and the complete list of pending API handlers.
+See [docs/postman/ARCHITECTURE.md](docs/postman/ARCHITECTURE.md) for detailed architecture and implementation overview.
 
 ---
 
