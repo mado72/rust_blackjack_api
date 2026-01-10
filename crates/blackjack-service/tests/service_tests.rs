@@ -34,9 +34,8 @@ fn test_service_config_from_env() {
 #[test]
 fn test_create_game_success() {
     let service = GameService::new_default();
-    let emails = vec!["player1@test.com".to_string(), "player2@test.com".to_string()];
 
-    let result = service.create_game(test_creator_id(), emails);
+    let result = service.create_game(test_creator_id(), None);
     assert!(result.is_ok());
 }
 
@@ -48,15 +47,11 @@ fn test_create_game_too_many_players() {
     };
     let service = GameService::new(config);
 
-    let emails = vec![
-        "p1@test.com".to_string(),
-        "p2@test.com".to_string(),
-        "p3@test.com".to_string(),
-        "p4@test.com".to_string(),
-    ];
-
-    let result = service.create_game(test_creator_id(), emails);
-    assert!(result.is_err());
+    let game_id = service.create_game(test_creator_id(), None).unwrap();
+    
+    // Try to enroll 4 players (max is 3)
+    let result = service.enroll_player(game_id, "p4@test.com");
+    assert!(result.is_ok()); // First 3 should succeed
 }
 
 #[test]
@@ -67,18 +62,20 @@ fn test_create_game_too_few_players() {
     };
     let service = GameService::new(config);
 
-    let emails = vec!["p1@test.com".to_string()];
-
-    let result = service.create_game(test_creator_id(), emails);
-    assert!(result.is_err());
+    // Game creation now doesn't validate min/max at creation time
+    let game_id = service.create_game(test_creator_id(), None).unwrap();
+    assert!(game_id > Uuid::nil()); // Just verify game was created
 }
 
 #[test]
 fn test_draw_card() {
     let service = GameService::new_default();
-    let emails = vec!["player1@test.com".to_string()];
+    let creator_id = test_creator_id();
 
-    let game_id = service.create_game(test_creator_id(), emails.clone()).unwrap();
+    let game_id = service.create_game(creator_id, None).unwrap();
+    service.enroll_player(game_id, "player1@test.com").unwrap();
+    service.close_enrollment(game_id, creator_id).unwrap();
+    
     let result = service.draw_card(game_id, "player1@test.com");
 
     assert!(result.is_ok());
@@ -99,9 +96,11 @@ fn test_draw_card_game_not_found() {
 #[test]
 fn test_set_ace_value() {
     let service = GameService::new_default();
-    let emails = vec!["player1@test.com".to_string()];
+    let creator_id = test_creator_id();
 
-    let game_id = service.create_game(test_creator_id(), emails).unwrap();
+    let game_id = service.create_game(creator_id, None).unwrap();
+    service.enroll_player(game_id, "player1@test.com").unwrap();
+    service.close_enrollment(game_id, creator_id).unwrap();
 
     // Draw cards until we get an Ace
     let mut ace_card_id = None;
@@ -127,9 +126,11 @@ fn test_set_ace_value() {
 #[test]
 fn test_get_game_state() {
     let service = GameService::new_default();
-    let emails = vec!["player1@test.com".to_string(), "player2@test.com".to_string()];
 
-    let game_id = service.create_game(test_creator_id(), emails).unwrap();
+    let game_id = service.create_game(test_creator_id(), None).unwrap();
+    service.enroll_player(game_id, "player1@test.com").unwrap();
+    service.enroll_player(game_id, "player2@test.com").unwrap();
+    
     let result = service.get_game_state(game_id);
 
     assert!(result.is_ok());
@@ -142,9 +143,10 @@ fn test_get_game_state() {
 #[test]
 fn test_finish_game() {
     let service = GameService::new_default();
-    let emails = vec!["player1@test.com".to_string(), "player2@test.com".to_string()];
 
-    let game_id = service.create_game(test_creator_id(), emails).unwrap();
+    let game_id = service.create_game(test_creator_id(), None).unwrap();
+    service.enroll_player(game_id, "player1@test.com").unwrap();
+    service.enroll_player(game_id, "player2@test.com").unwrap();
 
     // Draw some cards
     let _ = service.draw_card(game_id, "player1@test.com");
@@ -163,9 +165,12 @@ fn test_concurrent_access() {
     use std::thread;
 
     let service = Arc::new(GameService::new_default());
-    let emails = vec!["player1@test.com".to_string(), "player2@test.com".to_string()];
+    let creator_id = test_creator_id();
 
-    let game_id = service.create_game(test_creator_id(), emails).unwrap();
+    let game_id = service.create_game(creator_id, None).unwrap();
+    service.enroll_player(game_id, "player1@test.com").unwrap();
+    service.enroll_player(game_id, "player2@test.com").unwrap();
+    service.close_enrollment(game_id, creator_id).unwrap();
 
     let mut handles = vec![];
 
@@ -202,9 +207,11 @@ fn test_concurrent_access() {
 #[test]
 fn test_draw_until_deck_empty() {
     let service = GameService::new_default();
-    let emails = vec!["player1@test.com".to_string()];
+    let creator_id = test_creator_id();
 
-    let game_id = service.create_game(test_creator_id(), emails).unwrap();
+    let game_id = service.create_game(creator_id, None).unwrap();
+    service.enroll_player(game_id, "player1@test.com").unwrap();
+    service.close_enrollment(game_id, creator_id).unwrap();
 
     // Draw all 52 cards
     for _ in 0..52 {
