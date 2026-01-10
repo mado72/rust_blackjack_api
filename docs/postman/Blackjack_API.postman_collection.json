@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Blackjack API",
-    "description": "Coleção completa de endpoints para testar a API Blackjack Multi-Player\n\n⚠️ STATUS M7: Backend completo, mas endpoints HTTP NÃO disponíveis ainda\n✅ Todos os 9 endpoints desta coleção são M6 e estão FUNCIONAIS\n\nVer IMPLEMENTATION_STATUS.md para detalhes sobre recursos M7 pendentes.",
+    "description": "Coleção completa de endpoints para testar a API Blackjack Multi-Player\n\n✅ STATUS M7 FASE 1: Enrollment endpoints DISPONÍVEIS (Jan 10, 2026)\n\n✅ Milestone 7 - FASE 1 (Enrollment) - COMPLETO:\n- POST /api/v1/games (Create Game com enrollment)\n- GET /api/v1/games/open (List Open Games)\n- POST /api/v1/games/:game_id/enroll (Enroll Player)\n- POST /api/v1/games/:game_id/close-enrollment (Close Enrollment)\n\n✅ Milestone 6 - COMPLETO:\n- Todos os 9 endpoints M6 estão FUNCIONAIS\n\nVer IMPLEMENTATION_STATUS.md para detalhes sobre próximas fases (M7 FASE 2-4).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -183,7 +183,7 @@
       "name": "Game Management",
       "item": [
         {
-          "name": "Create Game",
+          "name": "Create Game (M7 - Enrollment Mode)",
           "event": [
             {
               "listen": "test",
@@ -194,7 +194,8 @@
                   "    const response = pm.response.json();",
                   "    pm.collectionVariables.set('game_id', response.game_id);",
                   "    console.log('Game ID salvo:', response.game_id);",
-                  "    console.log('Jogadores:', response.player_count);",
+                  "    console.log('Status:', response.game_phase);",
+                  "    console.log('Enrollment expira em:', response.enrollment_timeout);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -202,9 +203,6 @@
             }
           ],
           "request": {
-            "auth": {
-              "type": "noauth"
-            },
             "method": "POST",
             "header": [
               {
@@ -214,14 +212,100 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"emails\": [\n    \"player1@example.com\",\n    \"player2@example.com\",\n    \"player3@example.com\"\n  ]\n}"
+              "raw": "{\n  \"enrollment_timeout_seconds\": 300\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/games",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games"]
             },
-            "description": "Cria um novo jogo com 1-10 jogadores.\n\n**Body:**\n```json\n{\n  \"emails\": [\n    \"player1@example.com\",\n    \"player2@example.com\"\n  ]\n}\n```\n\n**Response:**\n- UUID do jogo criado (salvo automaticamente em `game_id`)\n- Número de jogadores\n\n**Não requer autenticação**"
+            "description": "**M7 FASE 1 - DISPONÍVEL ✅**\n\nCria um novo jogo no modo ENROLLMENT.\n\n**Body (opcional):**\n```json\n{\n  \"enrollment_timeout_seconds\": 300\n}\n```\n\n**Parâmetros:**\n- `enrollment_timeout_seconds`: Tempo em segundos para expiração do enrollment (opcional, padrão: 300s)\n\n**Response:**\n```json\n{\n  \"game_id\": \"uuid\",\n  \"creator_id\": \"uuid\",\n  \"game_phase\": \"Enrollment\",\n  \"enrollment_timeout\": \"2026-01-10T22:00:00Z\",\n  \"player_count\": 1\n}\n```\n\n**Requer autenticação JWT**\n**O criador é automaticamente o primeiro jogador**"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Open Games (M7)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/games/open",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "games", "open"]
+            },
+            "description": "**M7 FASE 1 - DISPONÍVEL ✅**\n\nLista todos os jogos atualmente em fase de ENROLLMENT (abertos para novas inscrições).\n\n**Response:**\n```json\n{\n  \"games\": [\n    {\n      \"game_id\": \"uuid\",\n      \"creator_email\": \"creator@example.com\",\n      \"player_count\": 3,\n      \"enrollment_timeout\": \"2026-01-10T22:00:00Z\",\n      \"created_at\": \"2026-01-10T21:55:00Z\"\n    }\n  ]\n}\n```\n\n**Requer autenticação JWT**\n**Apenas jogos em fase de Enrollment são retornados**\n**Máximo 10 jogadores por jogo**"
+          },
+          "response": []
+        },
+        {
+          "name": "Enroll Player (M7)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Verifica enrollment bem-sucedido",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Enrollment confirmado para jogo:', response.game_id);",
+                  "    console.log('Jogadores inscritos:', response.player_count);",
+                  "    console.log('Mensagem:', response.message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{player_email}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/games/{{game_id}}/enroll",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "games", "{{game_id}}", "enroll"]
+            },
+            "description": "**M7 FASE 1 - DISPONÍVEL ✅**\n\nInscreve um jogador em um jogo aberto (em fase de Enrollment).\n\n**Body:**\n```json\n{\n  \"email\": \"player@example.com\"\n}\n```\n\n**Validações:**\n- Jogo deve estar em fase Enrollment\n- Email no body deve corresponder ao email do JWT\n- Máximo 10 jogadores por jogo\n- Jogador não pode se inscrever duas vezes\n\n**Response:**\n```json\n{\n  \"game_id\": \"uuid\",\n  \"player_count\": 4,\n  \"message\": \"Player enrolled successfully\"\n}\n```\n\n**Erros possíveis:**\n- `409 Conflict`: Game is full (10 players)\n- `410 Gone`: Enrollment phase has ended\n- `403 Forbidden`: Email mismatch (JWT email ≠ body email)\n\n**Requer autenticação JWT**"
+          },
+          "response": []
+        },
+        {
+          "name": "Close Enrollment (M7)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Verifica fechamento bem-sucedido",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Enrollment fechado para jogo:', response.game_id);",
+                  "    console.log('Total de jogadores:', response.player_count);",
+                  "    console.log('Ordem de turnos gerada:', response.turn_order.length, 'jogadores');",
+                  "    console.log('Mensagem:', response.message);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/games/{{game_id}}/close-enrollment",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "games", "{{game_id}}", "close-enrollment"]
+            },
+            "description": "**M7 FASE 1 - DISPONÍVEL ✅**\n\nFecha a fase de enrollment e inicia o jogo.\n\n**Validações:**\n- Jogo deve estar em fase Enrollment\n- Apenas o CRIADOR do jogo pode fechar enrollment\n- Automaticamente gera ordem de turnos aleatória\n\n**Response:**\n```json\n{\n  \"game_id\": \"uuid\",\n  \"player_count\": 5,\n  \"turn_order\": [\n    \"player3@example.com\",\n    \"player1@example.com\",\n    \"creator@example.com\",\n    \"player2@example.com\",\n    \"player4@example.com\"\n  ],\n  \"message\": \"Enrollment closed. Game is ready to start.\"\n}\n```\n\n**Erros possíveis:**\n- `403 Forbidden`: Only game creator can close enrollment\n- `410 Gone`: Enrollment phase already ended\n\n**Requer autenticação JWT**\n**CREATOR-ONLY endpoint**"
           },
           "response": []
         },
