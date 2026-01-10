@@ -1306,3 +1306,349 @@ pub async fn stand(
         game_finished: game_state.finished,
     }))
 }
+
+// ============================================================================
+// M7: Game Enrollment Endpoints
+// ============================================================================
+
+/// Response for getting open games
+#[derive(Debug, Serialize)]
+pub struct GetOpenGamesResponse {
+    /// List of games in enrollment phase
+    pub games: Vec<OpenGameInfo>,
+    
+    /// Total number of open games
+    pub count: usize,
+}
+
+/// Information about an open game
+#[derive(Debug, Serialize)]
+pub struct OpenGameInfo {
+    /// Game ID
+    pub game_id: Uuid,
+    
+    /// Creator's user ID
+    pub creator_id: Uuid,
+    
+    /// Number of enrolled players
+    pub enrolled_count: u64,
+    
+    /// Maximum number of players allowed
+    pub max_players: u64,
+    
+    /// Enrollment timeout in seconds
+    pub enrollment_timeout_seconds: u64,
+    
+    /// Time remaining until enrollment closes (seconds)
+    pub time_remaining_seconds: i64,
+    
+    /// When enrollment closes (RFC3339 format)
+    pub enrollment_closes_at: String,
+}
+
+/// Gets all games currently in enrollment phase
+///
+/// Returns a list of games that are accepting player enrollments.
+/// Games must not be finished and must still be within their enrollment timeout.
+///
+/// # Endpoint
+///
+/// `GET /api/v1/games/open`
+///
+/// # Authentication
+///
+/// **Required** - Must include valid JWT token in Authorization header.
+///
+/// # Response
+///
+/// **Success (200 OK)**:
+/// ```json
+/// {
+///   "games": [
+///     {
+///       "game_id": "550e8400-e29b-41d4-a716-446655440000",
+///       "creator_id": "660e8400-e29b-41d4-a716-446655440000",
+///       "enrolled_count": 2,
+///       "max_players": 10,
+///       "enrollment_timeout_seconds": 300,
+///       "time_remaining_seconds": 250,
+///       "enrollment_closes_at": "2026-01-10T01:30:00Z"
+///     }
+///   ],
+///   "count": 1
+/// }
+/// ```
+///
+/// # Errors
+///
+/// - **401 Unauthorized** - Missing or invalid JWT token
+///
+/// # Example
+///
+/// ```bash
+/// curl http://localhost:8080/api/v1/games/open \
+///   -H "Authorization: Bearer YOUR_JWT_TOKEN"
+/// ```
+#[tracing::instrument(skip(state, _claims))]
+pub async fn get_open_games(
+    State(state): State<crate::AppState>,
+    Extension(_claims): Extension<Claims>,
+) -> Result<Json<GetOpenGamesResponse>, ApiError> {
+    let game_infos = state.game_service.get_open_games(None)?;
+    
+    let games = game_infos
+        .into_iter()
+        .map(|info| OpenGameInfo {
+            game_id: info.game_id,
+            creator_id: info.creator_id,
+            enrolled_count: info.enrolled_count,
+            max_players: info.max_players,
+            enrollment_timeout_seconds: info.enrollment_timeout_seconds,
+            time_remaining_seconds: info.time_remaining_seconds,
+            enrollment_closes_at: info.enrollment_closes_at,
+        })
+        .collect::<Vec<_>>();
+    
+    let count = games.len();
+
+    tracing::info!(
+        count = count,
+        "Retrieved open games list"
+    );
+
+    Ok(Json(GetOpenGamesResponse { games, count }))
+}
+
+/// Request to enroll a player in a game
+#[derive(Debug, Deserialize)]
+pub struct EnrollPlayerRequest {
+    /// Player's email address
+    pub email: String,
+}
+
+/// Response for player enrollment
+#[derive(Debug, Serialize)]
+pub struct EnrollPlayerResponse {
+    /// Game ID
+    pub game_id: Uuid,
+    
+    /// Player's email
+    pub email: String,
+    
+    /// Success message
+    pub message: String,
+    
+    /// Updated enrolled player count
+    pub enrolled_count: u64,
+}
+
+/// Enrolls a player in a game during enrollment phase
+///
+/// Adds a player to a game that is currently accepting enrollments.
+/// The game must not be finished and enrollment must still be open.
+///
+/// # Endpoint
+///
+/// `POST /api/v1/games/:game_id/enroll`
+///
+/// # Authentication
+///
+/// **Required** - Must include valid JWT token in Authorization header.
+///
+/// # Path Parameters
+///
+/// - `game_id` - UUID of the game
+///
+/// # Request Body
+///
+/// ```json
+/// {
+///   "email": "player@example.com"
+/// }
+/// ```
+///
+/// # Response
+///
+/// **Success (200 OK)**:
+/// ```json
+/// {
+///   "game_id": "550e8400-e29b-41d4-a716-446655440000",
+///   "email": "player@example.com",
+///   "message": "Player enrolled successfully",
+///   "enrolled_count": 3
+/// }
+/// ```
+///
+/// # Errors
+///
+/// - **401 Unauthorized** - Missing or invalid JWT token
+/// - **404 Not Found** - Game does not exist
+/// - **409 Conflict** - Game is full
+///   ```json
+///   {
+///     "message": "Game is full",
+///     "code": "GAME_FULL",
+///     "status": 409
+///   }
+///   ```
+/// - **410 Gone** - Enrollment period has closed
+///   ```json
+///   {
+///     "message": "Enrollment is closed for this game",
+///     "code": "ENROLLMENT_CLOSED",
+///     "status": 410
+///   }
+///   ```
+///
+/// # Example
+///
+/// ```bash
+/// curl -X POST http://localhost:8080/api/v1/games/550e8400-e29b-41d4-a716-446655440000/enroll \
+///   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+///   -H "Content-Type: application/json" \
+///   -d '{"email": "player@example.com"}'
+/// ```
+#[tracing::instrument(skip(state, _claims), fields(game_id, player_email = %payload.email))]
+pub async fn enroll_player(
+    State(state): State<crate::AppState>,
+    Extension(_claims): Extension<Claims>,
+    Path(game_id): Path<Uuid>,
+    Json(payload): Json<EnrollPlayerRequest>,
+) -> Result<Json<EnrollPlayerResponse>, ApiError> {
+    // Enroll the player
+    state.game_service.enroll_player(game_id, &payload.email)?;
+    
+    // Get updated game state to return enrolled count
+    let game_state = state.game_service.get_game_state(game_id)?;
+    let enrolled_count = game_state.players.len() as u64;
+
+    tracing::info!(
+        game_id = %game_id,
+        email = %payload.email,
+        enrolled_count = enrolled_count,
+        "Player enrolled successfully"
+    );
+
+    Ok(Json(EnrollPlayerResponse {
+        game_id,
+        email: payload.email,
+        message: "Player enrolled successfully".to_string(),
+        enrolled_count,
+    }))
+}
+
+/// Request to close enrollment for a game
+#[derive(Debug, Deserialize)]
+pub struct CloseEnrollmentRequest {
+    // No body needed - creator_id comes from JWT token
+}
+
+/// Response for closing enrollment
+#[derive(Debug, Serialize)]
+pub struct CloseEnrollmentResponse {
+    /// Game ID
+    pub game_id: Uuid,
+    
+    /// Success message
+    pub message: String,
+    
+    /// Order in which players will take turns
+    pub turn_order: Vec<String>,
+    
+    /// Total enrolled players
+    pub player_count: usize,
+}
+
+/// Closes enrollment for a game and initializes turn order
+///
+/// Only the game creator can close enrollment. Once closed, no more
+/// players can join. The turn order is randomized among enrolled players.
+///
+/// # Endpoint
+///
+/// `POST /api/v1/games/:game_id/close-enrollment`
+///
+/// # Authentication
+///
+/// **Required** - Player email extracted from JWT token.
+/// Must be the game creator.
+///
+/// # Path Parameters
+///
+/// - `game_id` - UUID of the game
+///
+/// # Response
+///
+/// **Success (200 OK)**:
+/// ```json
+/// {
+///   "game_id": "550e8400-e29b-41d4-a716-446655440000",
+///   "message": "Enrollment closed successfully",
+///   "turn_order": [
+///     "player1@example.com",
+///     "player3@example.com",
+///     "player2@example.com"
+///   ],
+///   "player_count": 3
+/// }
+/// ```
+///
+/// # Errors
+///
+/// - **401 Unauthorized** - Missing or invalid JWT token
+/// - **403 Forbidden** - User is not the game creator
+///   ```json
+///   {
+///     "message": "Only the game creator can close enrollment",
+///     "code": "NOT_GAME_CREATOR",
+///     "status": 403
+///   }
+///   ```
+/// - **404 Not Found** - Game does not exist
+///
+/// # Example
+///
+/// ```bash
+/// curl -X POST http://localhost:8080/api/v1/games/550e8400-e29b-41d4-a716-446655440000/close-enrollment \
+///   -H "Authorization: Bearer YOUR_JWT_TOKEN"
+/// ```
+#[tracing::instrument(skip(state, claims), fields(game_id))]
+pub async fn close_enrollment(
+    State(state): State<crate::AppState>,
+    Extension(claims): Extension<Claims>,
+    Path(game_id): Path<Uuid>,
+    Json(_payload): Json<CloseEnrollmentRequest>,
+) -> Result<Json<CloseEnrollmentResponse>, ApiError> {
+    // Parse user_id from claims (for now using email, but should be user_id)
+    // TODO: M7 - Update Claims to include user_id
+    let user_id = match uuid::Uuid::parse_str(&claims.user_id) {
+        Ok(id) => id,
+        Err(_) => {
+            // Fallback: generate a deterministic ID from email hash if needed
+            return Err(ApiError::new(
+                StatusCode::UNAUTHORIZED,
+                "INVALID_CLAIMS",
+                "Invalid user ID in JWT token",
+            ));
+        }
+    };
+
+    // Close enrollment (only creator can do this)
+    let turn_order = state.game_service.close_enrollment(game_id, user_id)?;
+    let player_count = turn_order.len();
+
+    tracing::info!(
+        game_id = %game_id,
+        creator_id = %user_id,
+        player_count = player_count,
+        turn_order = ?turn_order,
+        "Enrollment closed successfully"
+    );
+
+    Ok(Json(CloseEnrollmentResponse {
+        game_id,
+        message: "Enrollment closed successfully".to_string(),
+        turn_order,
+        player_count,
+    }))
+}
