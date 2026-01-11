@@ -49,6 +49,11 @@
       "key": "invitation_id",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "creator_id",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -189,11 +194,13 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Salva o game_id automaticamente",
+                  "// Salva o game_id e creator_id automaticamente",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    pm.collectionVariables.set('game_id', response.game_id);",
+                      "    pm.collectionVariables.set('creator_id', response.creator_id);",
                   "    console.log('Game ID salvo:', response.game_id);",
+                  "    console.log('Creator ID salvo:', response.creator_id);",
                   "    console.log('Status:', response.game_phase);",
                   "    console.log('Enrollment expira em:', response.enrollment_timeout);",
                   "}"
