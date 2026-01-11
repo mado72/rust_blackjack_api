@@ -390,17 +390,22 @@ pub struct CreateGameResponse {
     /// Unique identifier for the created game
     pub game_id: Uuid,
     
+    /// The UUID of the game creator
+    pub creator_id: Uuid,
+    
     /// Success message
     pub message: String,
     
-    /// Number of players in the game
-    pub player_count: usize,
+    /// Number of players in the game (includes creator)
+    pub player_count: u32,
 }
 
-/// Creates a new game with specified players
+/// Creates a new game in enrollment mode
 ///
-/// This endpoint initializes a new blackjack game with 1-10 players.
-/// Each game has its own 52-card deck and independent state.
+/// Initializes a new blackjack game in the Enrollment phase. The authenticated
+/// user becomes the creator and first enrolled player. Other players can join
+/// via the enrollment endpoint until the creator closes enrollment or the
+/// timeout expires.
 ///
 /// # Endpoint
 ///
@@ -408,7 +413,8 @@ pub struct CreateGameResponse {
 ///
 /// # Authentication
 ///
-/// No authentication required (public endpoint).
+/// **Required** - Must include valid JWT token in Authorization header.
+/// The `user_id` from the JWT becomes the game creator.
 ///
 /// # Request Body
 ///
@@ -449,47 +455,55 @@ pub struct CreateGameResponse {
 ///   }
 ///   ```
 ///
-/// - **400 Bad Request** - Empty email address
-///   ```json
-///   {
-///     "message": "Email cannot be empty",
-///     "code": "INVALID_EMAIL",
-///     "status": 400
-///   }
-///   ```
+/// - **500 Internal Server Error** - Database or service error
 ///
 /// # Example
 ///
 /// ```bash
 /// curl -X POST http://localhost:8080/api/v1/games \
+///   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
 ///   -H "Content-Type: application/json" \
 ///   -d '{
-///     "emails": ["player1@example.com", "player2@example.com"]
+///     "enrollment_timeout_seconds": 600
 ///   }'
 /// ```
-#[tracing::instrument(skip(state))]
+///
+/// # Notes
+///
+/// - Creator is automatically enrolled as the first player
+/// - Maximum 10 players per game
+/// - Enrollment phase lasts `enrollment_timeout_seconds` (default: 300s)
+/// - Creator can close enrollment early via `/close-enrollment` endpoint
+#[tracing::instrument(skip(state, claims))]
 pub async fn create_game(
     State(state): State<crate::AppState>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateGameRequest>,
 ) -> Result<Json<CreateGameResponse>, ApiError> {
-    // Create game via service with enrollment timeout
-    // TODO M7: Update to require authentication and use user_id as creator_id
-    // For backward compatibility, use a placeholder UUID
-    let creator_id = Uuid::new_v4(); // Temporary placeholder
-    let enrollment_timeout = payload.enrollment_timeout_seconds; // Can be None, will default to 300
+    // Parse user_id from JWT claims string to Uuid
+    let creator_id = Uuid::parse_str(&claims.user_id)
+        .map_err(|_| ApiError::new(
+            axum::http::StatusCode::BAD_REQUEST,
+            "INVALID_USER_ID",
+            "Invalid user_id format in token"
+        ))?;
+    
+    let enrollment_timeout = payload.enrollment_timeout_seconds;
     let game_id = state.game_service.create_game(creator_id, enrollment_timeout)?;
 
     tracing::info!(
         game_id = %game_id,
         creator_id = %creator_id,
+        user_email = %claims.email,
         enrollment_timeout = ?enrollment_timeout,
-        "Game created successfully"
+        "Game created successfully by authenticated user"
     );
 
     Ok(Json(CreateGameResponse {
         game_id,
+        creator_id,
         message: "Game created successfully".to_string(),
-        player_count: 0,
+        player_count: 1,
     }))
 }
 
