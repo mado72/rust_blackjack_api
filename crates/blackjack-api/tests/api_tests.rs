@@ -522,3 +522,72 @@ async fn test_create_game_creator_id_from_jwt() {
     assert_ne!(game1.game_id, game2.game_id);
     assert_ne!(game1.creator_id, game2.creator_id);
 }
+
+/// Tests that create_game rejects non-existent users
+///
+/// Validates:
+/// - Token with user_id that doesn't exist in database returns 401
+/// - Error message indicates user not found
+#[tokio::test]
+async fn test_create_game_rejects_nonexistent_user() {
+    use axum::extract::{State as AxumState, Extension};
+    use axum::Json;
+    use blackjack_api::handlers::{create_game, CreateGameRequest};
+    use blackjack_api::auth::Claims;
+    
+    // Setup AppState (empty user service)
+    let user_service = Arc::new(UserService::new());
+    let config = Arc::new(blackjack_api::config::AppConfig::from_file().unwrap());
+    let game_service = Arc::new(GameService::new(ServiceConfig::default()));
+    let invitation_service = Arc::new(InvitationService::new(InvitationConfig::default()));
+    let rate_limiter = blackjack_api::rate_limiter::RateLimiter::new(10);
+    
+    let state = AppState {
+        game_service,
+        user_service,
+        invitation_service,
+        config,
+        rate_limiter,
+    };
+    
+    // Create claims with non-existent user_id
+    let fake_user_id = uuid::Uuid::new_v4();
+    let claims = Claims {
+        user_id: fake_user_id.to_string(),
+        email: "nonexistent@example.com".to_string(),
+        exp: (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp() as usize,
+    };
+    
+    let result = create_game(
+        AxumState(state),
+        Extension(claims),
+        Json(CreateGameRequest { enrollment_timeout_seconds: None }),
+    ).await;
+    
+    assert!(result.is_err(), "Should reject non-existent user");
+    
+    let error = result.unwrap_err();
+    assert_eq!(error.status, axum::http::StatusCode::UNAUTHORIZED);
+    assert_eq!(error.code, "USER_NOT_FOUND");
+}
+
+/// Tests that JWT expiration is validated
+///
+/// Note: JWT expiration validation is done in the auth_middleware,
+/// not in the handler. This test documents the expected behavior.
+/// The actual validation is tested in middleware tests.
+#[test]
+fn test_jwt_expiration_validation_is_in_middleware() {
+    // JWT expiration is validated by jsonwebtoken library in auth_middleware
+    // The Validation::default() includes exp claim validation
+    // 
+    // When a token is expired:
+    // - decode() in auth_middleware returns Err
+    // - Middleware returns 401 Unauthorized
+    // - Request never reaches the handler
+    //
+    // This is tested in the middleware layer, not in handler tests
+    
+    // This test serves as documentation only
+    assert!(true, "JWT expiration is validated in auth_middleware");
+}

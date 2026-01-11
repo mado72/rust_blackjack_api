@@ -441,17 +441,21 @@ pub struct CreateGameResponse {
 ///
 /// # Errors
 ///
-/// - **400 Bad Request** - Invalid player count
+/// - **400 Bad Request** - Invalid user_id format in token
 ///   ```json
 ///   {
-///     "message": "Invalid number of players",
-///     "code": "INVALID_PLAYER_COUNT",
-///     "status": 400,
-///     "details": {
-///       "min": "1",
-///       "max": "10",
-///       "provided": "15"
-///     }
+///     "message": "Invalid user_id format in token",
+///     "code": "INVALID_USER_ID",
+///     "status": 400
+///   }
+///   ```
+///
+/// - **401 Unauthorized** - Missing, expired, or invalid JWT token
+///   ```json
+///   {
+///     "message": "User from token does not exist. Token may be invalid or user was deleted.",
+///     "code": "USER_NOT_FOUND",
+///     "status": 401
 ///   }
 ///   ```
 ///
@@ -486,6 +490,15 @@ pub async fn create_game(
             axum::http::StatusCode::BAD_REQUEST,
             "INVALID_USER_ID",
             "Invalid user_id format in token"
+        ))?;
+    
+    // Verify that the user exists in the database
+    // This ensures the JWT token references a valid, existing user
+    state.user_service.get_user(creator_id)
+        .map_err(|_| ApiError::new(
+            axum::http::StatusCode::UNAUTHORIZED,
+            "USER_NOT_FOUND",
+            "User from token does not exist. Token may be invalid or user was deleted."
         ))?;
     
     let enrollment_timeout = payload.enrollment_timeout_seconds;
