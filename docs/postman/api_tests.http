@@ -1,5 +1,9 @@
 ### Blackjack API - REST Client Examples
 ### Use esta file para testar rapidamente com a extensão REST Client do VS Code
+###
+### ⚠️ IMPORTANTE: Todos os endpoints abaixo são M6 e estão FUNCIONAIS
+### Endpoints M7 (registro, convites, turnos) ainda não estão disponíveis via HTTP
+### Ver IMPLEMENTATION_STATUS.md para detalhes
 
 @base_url = http://localhost:8080
 @jwt_token = 
@@ -75,7 +79,7 @@ POST {{base_url}}/api/v1/games/{{game_id}}/draw
 Authorization: Bearer {{jwt_token}}
 Content-Type: application/json
 
-### Salvar card_id se for um Ás
+### Salvar card_id da carta comprada (usar quando for Ás, representado como "A")
 # @card_id = {{drawCard.response.body.card.id}}
 
 ### Draw Card - Comprar outra carta

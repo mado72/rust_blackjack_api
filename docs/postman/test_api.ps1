@@ -140,7 +140,7 @@ for ($i = 1; $i -le 3; $i++) {
         Write-Host "  Cartas restantes: $($draw.cards_remaining)" -ForegroundColor Cyan
         
         # Salvar ID de um Ás se encontrar
-        if ($draw.card.name -eq "Ace" -and $null -eq $aceCardId) {
+        if ($draw.card.name -eq "A" -and $null -eq $aceCardId) {
             $aceCardId = $draw.card.id
             Write-Host "  ► Ás encontrado! ID salvo para teste." -ForegroundColor Yellow
         }

@@ -107,7 +107,7 @@ DRAW_RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/games/$GAME_ID/draw" \
   -H "Content-Type: application/json")
 echo "$DRAW_RESPONSE" | jq '.'
 CARD_NAME=$(echo "$DRAW_RESPONSE" | jq -r '.card.name')
-if [ "$CARD_NAME" = "Ace" ]; then
+if [ "$CARD_NAME" = "A" ]; then
   export CARD_ID=$(echo "$DRAW_RESPONSE" | jq -r '.card.id')
   echo "Ás encontrado! Card ID: $CARD_ID"
 fi

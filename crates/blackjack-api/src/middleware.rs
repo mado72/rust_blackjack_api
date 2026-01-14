@@ -103,7 +103,7 @@ pub async fn auth_middleware(
 
     tracing::debug!(
         email = token_data.claims.email,
-        game_id = token_data.claims.game_id,
+        user_id = token_data.claims.user_id,
         "Authentication successful"
     );
 
@@ -160,7 +160,8 @@ pub async fn rate_limit_middleware(
 ) -> Result<Response, ApiError> {
     // Only apply rate limiting to authenticated requests
     if let Some(claims) = request.extensions().get::<Claims>() {
-        let key = format!("{}:{}", claims.game_id, claims.email);
+        // M7: Use user_id for rate limiting instead of game_id:email
+        let key = claims.user_id.clone();
         state.rate_limiter.check_rate_limit(&key)?;
     }
 

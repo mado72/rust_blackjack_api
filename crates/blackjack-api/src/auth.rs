@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 /// JWT (JSON Web Token) claims structure
 ///
 /// This structure represents the payload of a JWT token used for authenticating
-/// players in the Blackjack API. Each token binds a player's email to a specific
-/// game and includes an expiration timestamp.
+/// users in the Blackjack API. Each token binds a user's email and ID and includes 
+/// an expiration timestamp.
 ///
 /// # Security
 ///
@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 ///
 /// # Token Lifecycle
 ///
-/// 1. Player requests token via `POST /api/v1/auth/login` with email and game_id
-/// 2. Server validates that player exists in the game
+/// 1. User requests token via `POST /api/v1/auth/login` with email and password
+/// 2. Server validates credentials
 /// 3. Server generates JWT with these claims and signs it
 /// 4. Client includes token in `Authorization: Bearer <token>` header
 /// 5. Middleware validates token and extracts claims for each protected request
@@ -27,28 +27,25 @@ use serde::{Deserialize, Serialize};
 /// use blackjack_api::auth::Claims;
 ///
 /// let claims = Claims {
-///     email: "player@example.com".to_string(),
-///     game_id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
+///     user_id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
+///     email: "user@example.com".to_string(),
 ///     exp: 1704672000, // Unix timestamp
 /// };
 /// ```
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
-    /// Player's email address
+    /// User's unique ID
     ///
-    /// This uniquely identifies the player within a game. It's used to:
-    /// - Look up the player's state in game operations
-    /// - Form the rate limiting key: `{game_id}:{email}`
-    /// - Ensure players can only act on their own behalf
-    pub email: String,
+    /// This uniquely identifies the user across the system. It's used to:
+    /// - Identify the user in game operations
+    /// - Form the rate limiting key
+    /// - Ensure users can only act on their own behalf
+    pub user_id: String,
     
-    /// Game UUID as a string
+    /// User's email address
     ///
-    /// Binds the token to a specific game session. Players cannot use a token
-    /// from one game to perform actions in another game.
-    ///
-    /// Format: UUID v4 string (e.g., "550e8400-e29b-41d4-a716-446655440000")
-    pub game_id: String,
+    /// The email associated with the user account for reference.
+    pub email: String,
     
     /// Token expiration time as Unix timestamp (seconds since epoch)
     ///
