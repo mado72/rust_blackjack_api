@@ -26,7 +26,7 @@
 //!
 //! ```no_run
 //! use blackjack_api::{AppState, config::AppConfig};
-//! use blackjack_service::{GameService, ServiceConfig};
+//! use blackjack_service::{GameService, ServiceConfig, UserService, InvitationService, InvitationConfig};
 //! use blackjack_api::rate_limiter::RateLimiter;
 //! use std::sync::Arc;
 //!
@@ -37,11 +37,15 @@
 //!     
 //!     // Create services
 //!     let game_service = Arc::new(GameService::new(ServiceConfig::from_env()));
+//!     let user_service = Arc::new(UserService::new());
+//!     let invitation_service = Arc::new(InvitationService::new(InvitationConfig::default()));
 //!     let rate_limiter = RateLimiter::new(config.rate_limit.requests_per_minute);
 //!     
 //!     // Create shared state
 //!     let state = AppState {
 //!         game_service,
+//!         user_service,
+//!         invitation_service,
 //!         config,
 //!         rate_limiter,
 //!     };
@@ -107,7 +111,7 @@ pub mod websocket;
 
 use config::AppConfig;
 use rate_limiter::RateLimiter;
-use blackjack_service::GameService;
+use blackjack_service::{GameService, UserService, InvitationService};
 use std::sync::Arc;
 
 /// Shared application state
@@ -120,23 +124,29 @@ use std::sync::Arc;
 ///
 /// All components are designed for concurrent access:
 /// - `GameService` uses `Arc<Mutex<HashMap>>` internally
+/// - `UserService` uses `Arc<Mutex<HashMap>>` internally
+/// - `InvitationService` uses `Arc<Mutex<HashMap>>` internally
 /// - `RateLimiter` uses `Arc<Mutex<HashMap>>` internally  
 /// - `AppConfig` is immutable after initialization
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
 /// use blackjack_api::{AppState, config::AppConfig};
-/// use blackjack_service::{GameService, ServiceConfig};
+/// use blackjack_service::{GameService, UserService, InvitationService, ServiceConfig, InvitationConfig};
 /// use blackjack_api::rate_limiter::RateLimiter;
 /// use std::sync::Arc;
 ///
 /// let config = Arc::new(AppConfig::from_file().unwrap());
 /// let game_service = Arc::new(GameService::new(ServiceConfig::default()));
+/// let user_service = Arc::new(UserService::new());
+/// let invitation_service = Arc::new(InvitationService::new(InvitationConfig::default()));
 /// let rate_limiter = RateLimiter::new(10);
 ///
 /// let state = AppState {
 ///     game_service,
+///     user_service,
+///     invitation_service,
 ///     config: config.clone(),
 ///     rate_limiter,
 /// };
@@ -152,6 +162,18 @@ pub struct AppState {
     /// and retrieving game state. Thread-safe for concurrent access.
     pub game_service: Arc<GameService>,
     
+    /// User service for managing user accounts
+    ///
+    /// Provides methods for user registration, login, and authentication.
+    /// Thread-safe for concurrent access.
+    pub user_service: Arc<UserService>,
+    
+    /// Invitation service for managing game invitations
+    ///
+    /// Provides methods for creating, accepting, and declining game invitations.
+    /// Thread-safe for concurrent access.
+    pub invitation_service: Arc<InvitationService>,
+    
     /// Application configuration
     ///
     /// Contains all runtime configuration including server settings, JWT secrets,
@@ -160,7 +182,7 @@ pub struct AppState {
     
     /// Rate limiter for request throttling
     ///
-    /// Enforces per-player request limits using a sliding window algorithm.
-    /// Tracks requests by `{game_id}:{email}` key.
+    /// Enforces per-user request limits using a sliding window algorithm.
+    /// Tracks requests by `user_id` key.
     pub rate_limiter: RateLimiter,
 }

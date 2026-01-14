@@ -14,3 +14,7 @@ requests_per_minute = 10
 
 [api]
 version_deprecation_months = 6
+
+[invitations]
+default_timeout_seconds = 300
+max_timeout_seconds = 3600
