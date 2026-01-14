@@ -47,6 +47,8 @@ pub enum GameError {
     PlayerNotActive,
     #[error("Not game creator")]
     NotGameCreator,
+    #[error("Enrollment is still open, close enrollment before gameplay")]
+    EnrollmentOpen,
     #[error("Core game error: {0}")]
     CoreError(#[from] CoreGameError),
 }

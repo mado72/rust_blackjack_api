@@ -1,102 +1,298 @@
-# Milestone 7 - Status Update & Next Steps
+# Milestone 8 - Security Hardening
 
 ## Current Status
 
-**Branch:** `feature/M7`  
-**Data:** January 14, 2026  
-**Implementação:** ✅ PHASE 1 COMPLETE | ✅ PHASE 2 COMPLETE  
-**Testes:** 83 testes passando ✅
+**Branch:** `feature/M8`  
+**Started:** January 14, 2026  
+**Dependencies:** M7 Complete ✅  
+**Estimated Effort:** 8-10 hours
 
 ---
 
-## ✅ PHASE 2 Completion Summary (January 14, 2026)
+## Overview
 
-### All Features Verified and Tested ✅
-
-**PHASE 2A: Invitation Endpoints**
-- ✅ `POST /api/v1/games/:game_id/invitations` - Already implemented and wired
-- ✅ `GET /api/v1/invitations/pending` - Already implemented and wired
-- ✅ `POST /api/v1/invitations/:id/accept` - Already implemented and wired
-- ✅ `POST /api/v1/invitations/:id/decline` - Already implemented and wired
-
-**PHASE 3: Turn Management System**
-- ✅ PlayerState enum (Active, Standing, Busted)
-- ✅ get_current_player() - Get current turn player
-- ✅ advance_turn() - Move to next active player
-- ✅ can_player_act() - Validate player can act
-- ✅ stand() - Mark player as standing
-- ✅ check_auto_finish() - Check if game should end
-- ✅ draw_card() - Updated with turn validation
-
-**PHASE 2B: Stand Endpoint**
-- ✅ `POST /api/v1/games/:game_id/stand` - Already implemented and wired
-
-**Testing:**
-- ✅ 19 new tests added for Phase 2 functionality
-- ✅ All 83 tests passing
-- ✅ Zero clippy warnings
-- ✅ Release build successful
-
-**See full details:** `docs/PHASE2_COMPLETION.md`
+Implement robust security measures including proper password hashing with modern cryptographic standards, enhanced input validation, and security headers to protect against common web vulnerabilities.
 
 ---
 
-## ✅ PHASE 1 Completion Summary (January 10, 2026)
+## 🔒 Security Improvements
 
-### PHASE 1: Wire API Routing - COMPLETE ✅
+### Phase 1: Password Hashing with Argon2 (3 hours)
 
-All 4 enrollment handlers have been successfully implemented, wired to the router, and tested:
+**Current State:** Passwords stored in plain text in memory (insecure)
 
-- ✅ `POST /api/v1/games` - Create game (routed and functional)
-- ✅ `GET /api/v1/games/open` - List open games (routed and functional)
-- ✅ `POST /api/v1/games/:game_id/enroll` - Enroll player (routed and functional)
-- ✅ `POST /api/v1/games/:game_id/close-enrollment` - Close enrollment (routed and functional)
+**Target State:** Passwords hashed with Argon2id
 
-**Implementation Status:**
-- ✅ 346 lines of handler code added
-- ✅ All handlers properly documented with examples
-- ✅ JWT authentication integrated
-- ✅ Error handling with proper HTTP status codes
-- ✅ Structured logging with tracing
-- ✅ End-to-end tested (78/78 tests passing)
-- ✅ No compilation warnings
-- ✅ Release build successful
+#### Tasks
 
-### Core Layer (100% - COMPLETO)
-- ✅ Game struct com campos de enrollment:
-  - creator_id: Uuid
-  - enrollment_timeout_seconds: u64 (default 300)
-  - enrollment_start_time: String (RFC3339)
-  - enrollment_closed: bool
-  - turn_order: Vec<String>
-  - current_turn_index: usize
+1. **Add Dependencies**
+   ```toml
+   # Cargo.toml
+   argon2 = "0.5"
+   ```
 
-- ✅ Métodos de enrollment implementados:
-  - is_enrollment_open() -> bool
-  - can_enroll() -> bool
-  - add_player(email) -> Result<(), GameError>
-  - close_enrollment() -> Result<(), GameError>
-  - get_enrollment_expires_at() -> String
-  - get_enrollment_time_remaining() -> i64
-  - can_player_act(email) -> bool
+2. **Update UserService**
+   - [ ] Implement password hashing in `register()`
+   - [ ] Implement password verification in `login()`
+   - [ ] Use Argon2id variant (recommended for password hashing)
+   - [ ] Configure secure parameters:
+     - Memory cost: 19456 KiB (19 MiB)
+     - Time cost: 2 iterations
+     - Parallelism: 1
+   - [ ] Generate random salt per password
 
-- ✅ Validação completa:
-  - Máximo 10 jogadores enforced
-  - Detecção de duplicatas
-  - Timeout global (não por convite)
-  - Players começam vazios (creator não enrolado automaticamente)
+3. **Migration Support**
+   - [ ] Add password migration utility (if needed for future DB)
+   - [ ] Document password format in code comments
 
-- ✅ GameInvitation refatorado:
-  - inviter_id: Uuid (antes era inviter_email: String)
-  - Usa game enrollment timeout (antes tinha timeout_seconds customizável)
-  - InvitationStatus enum: Pending, Accepted, Declined, Expired
-  - is_expired() method
+4. **Testing**
+   - [ ] Test password hashing during registration
+   - [ ] Test password verification during login
+   - [ ] Test invalid password rejection
+   - [ ] Test salt uniqueness
 
-### Service Layer (100% - COMPLETO)
-- ✅ GameService::create_game(creator_id, enrollment_timeout_seconds: Option<u64>)
-  - Cria game vazio
-  - Default 300 segundos
-  - Retorna Uuid
+**Acceptance Criteria:**
+- ✅ Passwords never stored in plain text
+- ✅ Argon2id hashing implemented
+- ✅ Salt generated per password
+- ✅ Login verification works correctly
+- ✅ Tests cover hashing scenarios
+
+---
+
+### Phase 2: Input Validation (2 hours)
+
+**Current State:** Basic validation, potential security gaps
+
+**Target State:** Comprehensive input validation with sanitization
+
+#### Tasks
+
+1. **Add Dependencies**
+   ```toml
+   # Cargo.toml
+   validator = { version = "0.16", features = ["derive"] }
+   regex = "1.10"
+   ```
+
+2. **Email Validation**
+   - [ ] Add email regex validation
+   - [ ] Reject invalid email formats
+   - [ ] Add length limits (max 254 chars)
+   - [ ] Normalize emails (lowercase, trim)
+
+3. **Password Strength Validation**
+   - [ ] Minimum 8 characters
+   - [ ] Require at least:
+     - 1 uppercase letter
+     - 1 lowercase letter
+     - 1 number
+     - 1 special character
+   - [ ] Maximum 128 characters
+   - [ ] Block common passwords (optional)
+
+4. **Game Input Validation**
+   - [ ] Validate enrollment_timeout_seconds (min: 60, max: 86400)
+   - [ ] Validate game_id format (UUID)
+   - [ ] Validate invitation_id format (UUID)
+
+5. **Request Size Limits**
+   - [ ] Add body size limits in middleware
+   - [ ] Reject oversized requests
+
+**Acceptance Criteria:**
+- ✅ Email validation implemented
+- ✅ Password strength enforced
+- ✅ Game parameters validated
+- ✅ Appropriate error messages
+- ✅ Tests cover validation scenarios
+
+---
+
+### Phase 3: Security Headers (1 hour)
+
+**Current State:** Basic CORS headers only
+
+**Target State:** Comprehensive security headers
+
+#### Tasks
+
+1. **Add tower-http Security Layer**
+   - Already in dependencies, enhance configuration
+
+2. **Implement Security Headers**
+   - [ ] `X-Content-Type-Options: nosniff`
+   - [ ] `X-Frame-Options: DENY`
+   - [ ] `X-XSS-Protection: 1; mode=block`
+   - [ ] `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+   - [ ] `Content-Security-Policy: default-src 'self'`
+   - [ ] `Referrer-Policy: strict-origin-when-cross-origin`
+
+3. **Update Middleware**
+   - [ ] Add security headers middleware
+   - [ ] Apply to all routes
+   - [ ] Document header purposes
+
+**Acceptance Criteria:**
+- ✅ All security headers present
+- ✅ Headers applied to all responses
+- ✅ HTTPS redirect configured (HSTS)
+
+---
+
+### Phase 4: Access Control Enhancement (2 hours)
+
+**Current State:** Basic JWT validation
+
+**Target State:** Enhanced permission validation
+
+#### Tasks
+
+1. **Role-Based Validation**
+   - [ ] Add `is_game_creator()` helper
+   - [ ] Validate creator-only actions:
+     - Close enrollment
+     - Delete game (future)
+   - [ ] Add detailed error messages for permission denied
+
+2. **Enrollment Validation**
+   - [ ] Verify user enrolled before game actions
+   - [ ] Block non-enrolled users from:
+     - Drawing cards
+     - Standing
+     - Viewing game details (optional)
+   - [ ] Only enrolled players can invite others
+
+3. **Rate Limiting Enhancement**
+   - [ ] Add per-endpoint rate limits:
+     - Register: 5/hour per IP
+     - Login: 10/hour per email
+     - Create game: 20/hour per user
+     - Draw card: 100/minute per user
+   - [ ] Add Redis support (future)
+
+**Acceptance Criteria:**
+- ✅ Creator-only actions enforced
+- ✅ Enrollment validated before gameplay
+- ✅ Rate limits per endpoint
+- ✅ Clear error messages
+
+---
+
+### Phase 5: Audit Logging (1 hour)
+
+**Current State:** Basic tracing logs
+
+**Target State:** Security audit trail
+
+#### Tasks
+
+1. **Security Event Logging**
+   - [ ] Log authentication failures
+   - [ ] Log permission denied events
+   - [ ] Log rate limit violations
+   - [ ] Log suspicious activities
+
+2. **Structured Logging**
+   - [ ] Add security-specific log levels
+   - [ ] Include user_id, IP, timestamp
+   - [ ] Add log correlation IDs
+
+3. **Log Rotation**
+   - [ ] Document log rotation strategy
+   - [ ] Add log level configuration
+
+**Acceptance Criteria:**
+- ✅ Security events logged
+- ✅ Structured format with context
+- ✅ Log rotation documented
+
+---
+
+## Testing Plan
+
+### Unit Tests
+- [ ] Password hashing tests (5 tests)
+- [ ] Email validation tests (10 tests)
+- [ ] Password strength tests (8 tests)
+- [ ] Access control tests (6 tests)
+
+### Integration Tests
+- [ ] End-to-end with password hashing
+- [ ] Invalid input rejection
+- [ ] Permission denied scenarios
+- [ ] Rate limit enforcement
+
+### Security Tests
+- [ ] SQL injection attempts (N/A - no SQL yet)
+- [ ] XSS attempts (header protection)
+- [ ] CSRF attempts (header protection)
+- [ ] Brute force login attempts
+
+**Target:** 110+ tests passing
+
+---
+
+## Documentation Updates
+
+- [ ] Update README.md with security features
+- [ ] Add SECURITY.md with vulnerability reporting
+- [ ] Update PRD.md M8 section as complete
+- [ ] Add password requirements to API docs
+- [ ] Document security headers
+
+---
+
+## Migration Notes
+
+### Breaking Changes
+
+1. **Password Format**
+   - Old: Plain text stored
+   - New: Argon2 hash stored
+   - Migration: Existing users need to re-register (in-memory, no impact)
+
+2. **Validation Rules**
+   - Stricter email validation
+   - Password strength requirements
+   - May reject previously accepted inputs
+
+3. **Error Messages**
+   - More detailed validation errors
+   - Security-conscious error messages (no user enumeration)
+
+---
+
+## Success Criteria
+
+- ✅ Argon2 password hashing implemented
+- ✅ Comprehensive input validation
+- ✅ Security headers on all responses
+- ✅ Enhanced access control
+- ✅ Security audit logging
+- ✅ All tests passing (110+)
+- ✅ Zero security warnings
+- ✅ Documentation updated
+- ✅ Code review approved
+
+---
+
+## References
+
+- **PRD:** [docs/PRD.md](PRD.md) - Milestone 8 section
+- **Argon2 Spec:** [RFC 9106](https://www.rfc-editor.org/rfc/rfc9106.html)
+- **OWASP Top 10:** Security best practices
+- **Axum Security:** Tower-http security middleware
+
+---
+
+## Next Milestone Preview
+
+**Milestone 9: Database Integration (SQLite)**
+- Persistent storage
+- User accounts
+- Game history
+- Migration system
 
 - ✅ GameService::get_open_games(exclude_user_id: Option<Uuid>) -> Vec<GameInfo>
   - Lista games em fase de enrollment

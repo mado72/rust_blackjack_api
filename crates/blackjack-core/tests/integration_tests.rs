@@ -531,7 +531,7 @@ fn test_draw_card_enrollment_open() {
     game.add_player("player1@test.com".to_string()).unwrap();
     
     let result = game.draw_card("player1@test.com");
-    assert_eq!(result, Err(GameError::NotPlayerTurn), "Cannot draw during enrollment phase");
+    assert_eq!(result, Err(GameError::EnrollmentOpen), "Cannot draw during enrollment phase");
 }
 
 #[test]

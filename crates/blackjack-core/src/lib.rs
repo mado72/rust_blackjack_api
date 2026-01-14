@@ -199,6 +199,7 @@ pub enum GameError {
     NotAnAce,
     NotPlayerTurn,
     PlayerNotActive,
+    EnrollmentOpen,
 }
 
 impl std::fmt::Display for GameError {
@@ -215,6 +216,7 @@ impl std::fmt::Display for GameError {
             GameError::NotAnAce => write!(f, "Can only change value of Ace cards"),
             GameError::NotPlayerTurn => write!(f, "It's not this player's turn"),
             GameError::PlayerNotActive => write!(f, "Player is not active (standing or busted)"),
+            GameError::EnrollmentOpen => write!(f, "Cannot perform game actions while enrollment is open"),
         }
     }
 }
@@ -277,6 +279,11 @@ impl Game {
     pub fn draw_card(&mut self, email: &str) -> Result<Card, GameError> {
         if self.finished {
             return Err(GameError::GameAlreadyFinished);
+        }
+
+        // Check if enrollment is closed before allowing gameplay
+        if !self.enrollment_closed {
+            return Err(GameError::EnrollmentOpen);
         }
 
         if self.available_cards.is_empty() {
@@ -458,6 +465,11 @@ impl Game {
     pub fn stand(&mut self, email: &str) -> Result<(), GameError> {
         if self.finished {
             return Err(GameError::GameAlreadyFinished);
+        }
+
+        // Check if enrollment is closed before allowing gameplay
+        if !self.enrollment_closed {
+            return Err(GameError::EnrollmentOpen);
         }
 
         // Check if it's the player's turn

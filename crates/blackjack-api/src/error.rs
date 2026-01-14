@@ -313,6 +313,9 @@ impl From<blackjack_service::GameError> for ApiError {
             GameError::NotGameCreator => {
                 Self::new(StatusCode::FORBIDDEN, "NOT_GAME_CREATOR", "Only the game creator can perform this action")
             }
+            GameError::EnrollmentOpen => {
+                Self::new(StatusCode::PRECONDITION_FAILED, "ENROLLMENT_OPEN", "Cannot perform game actions while enrollment is open. Close enrollment first.")
+            }
             GameError::CoreError(core_err) => {
                 Self::new(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", core_err.to_string())
             }
