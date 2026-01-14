@@ -71,13 +71,14 @@ async fn main() {
         "Server configuration loaded"
     );
 
-    // Create game service with configuration from environment variables
-    // Service manages all active games with thread-safe concurrent access
-    let service_config = ServiceConfig::from_env();
-    let game_service = Arc::new(GameService::new(service_config));
-
     // Create user service for authentication
     let user_service = Arc::new(UserService::new());
+
+    // Create game service with configuration from environment variables
+    // Service manages all active games with thread-safe concurrent access
+    // Requires user service to look up creator emails when creating games
+    let service_config = ServiceConfig::from_env();
+    let game_service = Arc::new(GameService::new(service_config, user_service.clone()));
 
     // Create invitation service with configuration
     let invitation_config = InvitationConfig::from_env();

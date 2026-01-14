@@ -410,38 +410,47 @@ impl InvitationService {
 /// Main game service managing multiple games
 pub struct GameService {
     games: Arc<Mutex<HashMap<Uuid, Game>>>,
+    user_service: Arc<UserService>,
     config: ServiceConfig,
 }
 
 impl GameService {
     /// Creates a new game service with the given configuration
-    pub fn new(config: ServiceConfig) -> Self {
+    pub fn new(config: ServiceConfig, user_service: Arc<UserService>) -> Self {
         Self {
             games: Arc::new(Mutex::new(HashMap::new())),
+            user_service,
             config,
         }
     }
 
     /// Creates a new game service with default configuration
     pub fn new_default() -> Self {
-        Self::new(ServiceConfig::default())
+        let user_service = Arc::new(UserService::new());
+        Self::new(ServiceConfig::default(), user_service)
     }
 
     /// Creates a new game with the specified creator and enrollment timeout
+    /// The creator is automatically enrolled in the game
+    /// Creator's email is retrieved from the user database
     #[tracing::instrument(skip(self), fields(game_id))]
     pub fn create_game(&self, creator_id: Uuid, enrollment_timeout_seconds: Option<u64>) -> Result<Uuid, GameError> {
         // Use provided timeout or default to 300 seconds
         let timeout = enrollment_timeout_seconds.unwrap_or(300);
 
-        // Create game with just the creator, no initial players
-        let game = Game::new(creator_id, timeout)?;
+        // Get creator's email from user service
+        let creator = self.user_service.get_user(creator_id)?;
+        let creator_email = creator.email;
+
+        // Create game with creator automatically enrolled
+        let game = Game::new(creator_id, creator_email.clone(), timeout)?;
         let game_id = game.id;
 
         // Store the game
         let mut games = self.games.lock().unwrap();
         games.insert(game_id, game);
 
-        tracing::info!(game_id = %game_id, creator_id = %creator_id, enrollment_timeout_seconds = timeout, "Game created");
+        tracing::info!(game_id = %game_id, creator_id = %creator_id, creator_email = %creator_email, enrollment_timeout_seconds = timeout, "Game created with creator auto-enrolled");
 
         Ok(game_id)
     }

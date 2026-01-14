@@ -36,8 +36,8 @@
 //!     let config = Arc::new(AppConfig::from_file().expect("Failed to load config"));
 //!     
 //!     // Create services
-//!     let game_service = Arc::new(GameService::new(ServiceConfig::from_env()));
 //!     let user_service = Arc::new(UserService::new());
+//!     let game_service = Arc::new(GameService::new(ServiceConfig::from_env(), user_service.clone()));
 //!     let invitation_service = Arc::new(InvitationService::new(InvitationConfig::default()));
 //!     let rate_limiter = RateLimiter::new(config.rate_limit.requests_per_minute);
 //!     

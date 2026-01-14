@@ -45,8 +45,8 @@ fn test_app_state_creation() {
     assert!(config.is_ok(), "Config should load from file");
     
     let config = Arc::new(config.unwrap());
-    let game_service = Arc::new(GameService::new(ServiceConfig::default()));
     let user_service = Arc::new(UserService::new());
+    let game_service = Arc::new(GameService::new(ServiceConfig::default(), user_service.clone()));
     let invitation_service = Arc::new(InvitationService::new(InvitationConfig::default()));
     let rate_limiter = blackjack_api::rate_limiter::RateLimiter::new(
         config.rate_limit.requests_per_minute
@@ -398,7 +398,7 @@ async fn test_create_game_requires_authentication() {
     
     // Create AppState for handler
     let config = Arc::new(blackjack_api::config::AppConfig::from_file().unwrap());
-    let game_service = Arc::new(GameService::new(ServiceConfig::default()));
+    let game_service = Arc::new(GameService::new(ServiceConfig::default(), user_service.clone()));
     let invitation_service = Arc::new(InvitationService::new(InvitationConfig::default()));
     let rate_limiter = blackjack_api::rate_limiter::RateLimiter::new(
         config.rate_limit.requests_per_minute
@@ -472,7 +472,7 @@ async fn test_create_game_creator_id_from_jwt() {
     
     // Setup AppState
     let config = Arc::new(blackjack_api::config::AppConfig::from_file().unwrap());
-    let game_service = Arc::new(GameService::new(ServiceConfig::default()));
+    let game_service = Arc::new(GameService::new(ServiceConfig::default(), user_service.clone()));
     let invitation_service = Arc::new(InvitationService::new(InvitationConfig::default()));
     let rate_limiter = blackjack_api::rate_limiter::RateLimiter::new(10);
     
@@ -538,7 +538,7 @@ async fn test_create_game_rejects_nonexistent_user() {
     // Setup AppState (empty user service)
     let user_service = Arc::new(UserService::new());
     let config = Arc::new(blackjack_api::config::AppConfig::from_file().unwrap());
-    let game_service = Arc::new(GameService::new(ServiceConfig::default()));
+    let game_service = Arc::new(GameService::new(ServiceConfig::default(), user_service.clone()));
     let invitation_service = Arc::new(InvitationService::new(InvitationConfig::default()));
     let rate_limiter = blackjack_api::rate_limiter::RateLimiter::new(10);
     

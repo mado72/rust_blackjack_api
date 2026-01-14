@@ -6,13 +6,20 @@ fn test_creator_id() -> Uuid {
     Uuid::new_v4()
 }
 
+// Helper function to create a test creator email
+fn test_creator_email() -> String {
+    "creator@test.com".to_string()
+}
+
 // Helper function to create a game with default enrollment timeout
 fn test_game(emails: Vec<&str>) -> Result<Game, GameError> {
-    let mut game = Game::new(test_creator_id(), 300)?;
+    let mut game = Game::new(test_creator_id(), test_creator_email(), 300)?;
     
-    // Enroll players
+    // Enroll additional players (creator is already enrolled)
     for email in emails {
-        game.add_player(email.to_string())?;
+        if email != "creator@test.com" {
+            game.add_player(email.to_string())?;
+        }
     }
     
     // Close enrollment to allow gameplay
@@ -56,7 +63,13 @@ fn test_deck_exhaustion() {
     // Draw cards until player busts or game finishes
     let mut cards_drawn = 0;
     loop {
-        let result = game.draw_card("player1@test.com");
+        // Try the current player
+        let current_player = game.get_current_player().unwrap_or("").to_string();
+        if current_player.is_empty() {
+            break;
+        }
+        
+        let result = game.draw_card(&current_player);
         match result {
             Ok(_) => cards_drawn += 1,
             Err(GameError::PlayerAlreadyBusted) => {
@@ -68,7 +81,7 @@ fn test_deck_exhaustion() {
                 break;
             }
             Err(GameError::GameAlreadyFinished) => {
-                // Game finished (auto-finish after player busts)
+                // Game finished (auto-finish after all players done)
                 break;
             }
             Err(e) => panic!("Unexpected error: {:?}", e),
@@ -86,7 +99,7 @@ fn test_deck_exhaustion() {
     game2.available_cards.clear();
     
     // Now try to draw from empty deck
-    let result = game2.draw_card("player1@test.com");
+    let result = game2.draw_card("creator@test.com");
     assert_eq!(result, Err(GameError::DeckEmpty), "Should return DeckEmpty error");
 }
 
@@ -243,21 +256,24 @@ fn test_calculate_results_perfect_21() {
 
 #[test]
 fn test_invalid_player_count_zero() {
-    // In the new M7 model, empty games (zero players) are allowed during enrollment phase
-    let result = Game::new(test_creator_id(), 300);
-    assert!(result.is_ok(), "Empty game should be allowed for enrollment phase");
+    // In the new M7 model, games start with creator already enrolled
+    let result = Game::new(test_creator_id(), test_creator_email(), 300);
+    assert!(result.is_ok(), "Game should be created with creator enrolled");
+    
+    let game = result.unwrap();
+    assert_eq!(game.players.len(), 1, "Game should have 1 player (creator)");
 }
 
 #[test]
 fn test_invalid_player_count_too_many() {
-    // In new M7 model, validation happens during add_player, not Game::new
-    let mut game = Game::new(test_creator_id(), 300).unwrap();
+    // In new M7 model, creator is auto-enrolled, so we can add 9 more players
+    let mut game = Game::new(test_creator_id(), test_creator_email(), 300).unwrap();
     
-    // Try to add 11 players
-    for i in 1..=11 {
+    // Try to add 10 more players (total would be 11 with creator)
+    for i in 1..=10 {
         let email = format!("player{}@test.com", i);
-        if i <= 10 {
-            assert!(game.add_player(email).is_ok(), "Should allow up to 10 players");
+        if i <= 9 {
+            assert!(game.add_player(email).is_ok(), "Should allow up to 10 total players (9 + creator)");
         } else {
             assert!(game.add_player(email).is_err(), "Should reject more than 10 players");
         }
@@ -266,21 +282,19 @@ fn test_invalid_player_count_too_many() {
 
 #[test]
 fn test_invalid_email_empty() {
-    // In new M7 model, validation happens during add_player, not Game::new
-    let mut game = Game::new(test_creator_id(), 300).unwrap();
-    let result = game.add_player("".to_string());
+    // Test creating game with empty creator email
+    let result = Game::new(test_creator_id(), "".to_string(), 300);
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), GameError::InvalidEmail));
 }
 
 #[test]
 fn test_invalid_email_duplicate() {
-    // In new M7 model, validation happens during add_player, not Game::new
-    let mut game = Game::new(test_creator_id(), 300).unwrap();
+    // Creator is auto-enrolled, so trying to add creator again should fail
+    let mut game = Game::new(test_creator_id(), test_creator_email(), 300).unwrap();
     
-    let email = "player1@test.com".to_string();
-    assert!(game.add_player(email.clone()).is_ok(), "First add should succeed");
-    assert!(game.add_player(email.clone()).is_err(), "Duplicate should fail");
+    let result = game.add_player(test_creator_email());
+    assert!(result.is_err(), "Duplicate email (creator) should fail");
 }
 
 #[test]
@@ -296,19 +310,23 @@ fn test_player_not_in_game() {
 fn test_busted_player_cannot_draw() {
     let mut game = test_game(vec!["player1@test.com"]).unwrap();
     
-    // Manually set player as busted
-    game.players.get_mut("player1@test.com").unwrap().busted = true;
+    // Manually set creator (current player) as busted
+    game.players.get_mut("creator@test.com").unwrap().busted = true;
     
-    let result = game.draw_card("player1@test.com");
+    let result = game.draw_card("creator@test.com");
     assert_eq!(result, Err(GameError::PlayerAlreadyBusted));
 }
 
 #[test]
 fn test_valid_player_range() {
-    // In new M7 model, creating a game is independent of player count
+    // In new M8 model, creating a game automatically enrolls the creator (1 player)
     for _count in 0..=10 {
-        let result = Game::new(test_creator_id(), 300);
-        assert!(result.is_ok(), "Should accept enrollment with 0-10 players");
+        let result = Game::new(test_creator_id(), format!("user{}@test.com", _count), 300);
+        assert!(result.is_ok(), "Should accept game creation with valid email");
+        
+        if let Ok(game) = result {
+            assert_eq!(game.players.len(), 1, "Game should start with 1 player (creator)");
+        }
     }
 }
 
@@ -320,6 +338,10 @@ fn test_valid_player_range() {
 fn test_player_state_initial() {
     use blackjack_core::PlayerState;
     let game = test_game(vec!["player1@test.com"]).unwrap();
+    
+    // Check both creator and enrolled player
+    let creator = game.players.get("creator@test.com").unwrap();
+    assert_eq!(creator.state, PlayerState::Active, "Creator should be Active");
     
     let player = game.players.get("player1@test.com").unwrap();
     assert_eq!(player.state, PlayerState::Active, "New players should be Active");
@@ -333,9 +355,9 @@ fn test_get_current_player() {
         "player3@test.com",
     ]).unwrap();
     
-    // First player should be current
+    // Creator is enrolled first, so should have first turn
     let current = game.get_current_player();
-    assert_eq!(current, Some("player1@test.com"), "First player should have first turn");
+    assert_eq!(current, Some("creator@test.com"), "Creator should have first turn");
 }
 
 #[test]
@@ -346,6 +368,9 @@ fn test_advance_turn() {
         "player3@test.com",
     ]).unwrap();
     
+    assert_eq!(game.get_current_player(), Some("creator@test.com"));
+    
+    game.advance_turn();
     assert_eq!(game.get_current_player(), Some("player1@test.com"));
     
     game.advance_turn();
@@ -355,7 +380,7 @@ fn test_advance_turn() {
     assert_eq!(game.get_current_player(), Some("player3@test.com"));
     
     game.advance_turn();
-    assert_eq!(game.get_current_player(), Some("player1@test.com"), "Should wrap around");
+    assert_eq!(game.get_current_player(), Some("creator@test.com"), "Should wrap around to creator");
 }
 
 #[test]
@@ -367,14 +392,14 @@ fn test_advance_turn_skips_standing_players() {
         "player3@test.com",
     ]).unwrap();
     
-    // Mark player2 as standing
-    game.players.get_mut("player2@test.com").unwrap().state = PlayerState::Standing;
+    // Mark player1 as standing (second in turn order after creator)
+    game.players.get_mut("player1@test.com").unwrap().state = PlayerState::Standing;
     
-    assert_eq!(game.get_current_player(), Some("player1@test.com"));
+    assert_eq!(game.get_current_player(), Some("creator@test.com"));
     
     game.advance_turn();
-    // Should skip player2 and go to player3
-    assert_eq!(game.get_current_player(), Some("player3@test.com"));
+    // Should skip player1 and go to player2
+    assert_eq!(game.get_current_player(), Some("player2@test.com"));
 }
 
 #[test]
@@ -386,14 +411,14 @@ fn test_advance_turn_skips_busted_players() {
         "player3@test.com",
     ]).unwrap();
     
-    // Mark player2 as busted
-    game.players.get_mut("player2@test.com").unwrap().state = PlayerState::Busted;
+    // Mark player1 as busted (second in turn order after creator)
+    game.players.get_mut("player1@test.com").unwrap().state = PlayerState::Busted;
     
-    assert_eq!(game.get_current_player(), Some("player1@test.com"));
+    assert_eq!(game.get_current_player(), Some("creator@test.com"));
     
     game.advance_turn();
-    // Should skip player2 and go to player3
-    assert_eq!(game.get_current_player(), Some("player3@test.com"));
+    // Should skip player1 and go to player2
+    assert_eq!(game.get_current_player(), Some("player2@test.com"));
 }
 
 #[test]
@@ -401,11 +426,11 @@ fn test_stand_marks_player_as_standing() {
     use blackjack_core::PlayerState;
     let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
     
-    assert_eq!(game.get_current_player(), Some("player1@test.com"));
+    assert_eq!(game.get_current_player(), Some("creator@test.com"));
     
-    game.stand("player1@test.com").unwrap();
+    game.stand("creator@test.com").unwrap();
     
-    let player = game.players.get("player1@test.com").unwrap();
+    let player = game.players.get("creator@test.com").unwrap();
     assert_eq!(player.state, PlayerState::Standing);
 }
 
@@ -413,20 +438,20 @@ fn test_stand_marks_player_as_standing() {
 fn test_stand_advances_turn() {
     let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
     
+    assert_eq!(game.get_current_player(), Some("creator@test.com"));
+    
+    game.stand("creator@test.com").unwrap();
+    
     assert_eq!(game.get_current_player(), Some("player1@test.com"));
-    
-    game.stand("player1@test.com").unwrap();
-    
-    assert_eq!(game.get_current_player(), Some("player2@test.com"));
 }
 
 #[test]
 fn test_stand_not_your_turn() {
     let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
     
-    assert_eq!(game.get_current_player(), Some("player1@test.com"));
+    assert_eq!(game.get_current_player(), Some("creator@test.com"));
     
-    let result = game.stand("player2@test.com");
+    let result = game.stand("player1@test.com");
     assert_eq!(result, Err(GameError::NotPlayerTurn));
 }
 
@@ -435,6 +460,9 @@ fn test_stand_auto_finishes_game() {
     let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
     
     assert!(!game.finished);
+    
+    game.stand("creator@test.com").unwrap();
+    assert!(!game.finished, "Game should not finish with players remaining");
     
     game.stand("player1@test.com").unwrap();
     assert!(!game.finished, "Game should not finish with one player remaining");
@@ -448,6 +476,7 @@ fn test_check_auto_finish_all_standing() {
     use blackjack_core::PlayerState;
     let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
     
+    game.players.get_mut("creator@test.com").unwrap().state = PlayerState::Standing;
     game.players.get_mut("player1@test.com").unwrap().state = PlayerState::Standing;
     game.players.get_mut("player2@test.com").unwrap().state = PlayerState::Standing;
     
@@ -459,6 +488,7 @@ fn test_check_auto_finish_all_busted() {
     use blackjack_core::PlayerState;
     let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
     
+    game.players.get_mut("creator@test.com").unwrap().state = PlayerState::Busted;
     game.players.get_mut("player1@test.com").unwrap().state = PlayerState::Busted;
     game.players.get_mut("player2@test.com").unwrap().state = PlayerState::Busted;
     
@@ -470,6 +500,7 @@ fn test_check_auto_finish_mixed() {
     use blackjack_core::PlayerState;
     let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
     
+    game.players.get_mut("creator@test.com").unwrap().state = PlayerState::Standing;
     game.players.get_mut("player1@test.com").unwrap().state = PlayerState::Standing;
     game.players.get_mut("player2@test.com").unwrap().state = PlayerState::Busted;
     
@@ -491,46 +522,44 @@ fn test_check_auto_finish_has_active_player() {
 fn test_can_player_act_current_turn() {
     let game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
     
-    assert!(game.can_player_act("player1@test.com"), "Current player should be able to act");
-    assert!(!game.can_player_act("player2@test.com"), "Non-current player should not be able to act");
+    assert!(game.can_player_act("creator@test.com"), "Creator (current player) should be able to act");
+    assert!(!game.can_player_act("player1@test.com"), "Non-current player should not be able to act");
 }
 
 #[test]
 fn test_can_player_act_enrollment_open() {
-    let mut game = Game::new(test_creator_id(), 300).unwrap();
-    game.add_player("player1@test.com".to_string()).unwrap();
+    let game = Game::new(test_creator_id(), test_creator_email(), 300).unwrap();
     
     // Enrollment still open
-    assert!(!game.can_player_act("player1@test.com"), "Cannot act during enrollment phase");
+    assert!(!game.can_player_act(&test_creator_email()), "Cannot act during enrollment phase");
 }
 
 #[test]
 fn test_draw_card_advances_turn() {
     let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
     
-    assert_eq!(game.get_current_player(), Some("player1@test.com"));
+    assert_eq!(game.get_current_player(), Some("creator@test.com"));
     
-    game.draw_card("player1@test.com").unwrap();
+    game.draw_card("creator@test.com").unwrap();
     
-    assert_eq!(game.get_current_player(), Some("player2@test.com"), "Turn should advance after drawing");
+    assert_eq!(game.get_current_player(), Some("player1@test.com"), "Turn should advance after drawing");
 }
 
 #[test]
 fn test_draw_card_not_your_turn() {
     let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
     
-    assert_eq!(game.get_current_player(), Some("player1@test.com"));
+    assert_eq!(game.get_current_player(), Some("creator@test.com"));
     
-    let result = game.draw_card("player2@test.com");
+    let result = game.draw_card("player1@test.com");
     assert_eq!(result, Err(GameError::NotPlayerTurn));
 }
 
 #[test]
 fn test_draw_card_enrollment_open() {
-    let mut game = Game::new(test_creator_id(), 300).unwrap();
-    game.add_player("player1@test.com".to_string()).unwrap();
+    let mut game = Game::new(test_creator_id(), test_creator_email(), 300).unwrap();
     
-    let result = game.draw_card("player1@test.com");
+    let result = game.draw_card(&test_creator_email());
     assert_eq!(result, Err(GameError::NotPlayerTurn), "Cannot draw during enrollment phase");
 }
 

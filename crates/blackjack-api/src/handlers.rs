@@ -502,6 +502,7 @@ pub async fn create_game(
         ))?;
     
     let enrollment_timeout = payload.enrollment_timeout_seconds;
+    // Creator email is automatically retrieved from user database by the service
     let game_id = state.game_service.create_game(creator_id, enrollment_timeout)?;
 
     tracing::info!(
@@ -509,13 +510,13 @@ pub async fn create_game(
         creator_id = %creator_id,
         user_email = %claims.email,
         enrollment_timeout = ?enrollment_timeout,
-        "Game created successfully by authenticated user"
+        "Game created successfully with creator auto-enrolled"
     );
 
     Ok(Json(CreateGameResponse {
         game_id,
         creator_id,
-        message: "Game created successfully".to_string(),
+        message: "Game created successfully. You are automatically enrolled.".to_string(),
         player_count: 1,
     }))
 }

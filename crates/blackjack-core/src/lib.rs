@@ -227,6 +227,7 @@ pub struct Game {
     pub id: Uuid,
     pub creator_id: Uuid,
     pub players: HashMap<String, Player>,
+    pub dealer: Player,
     pub available_cards: Vec<Card>,
     pub finished: bool,
     pub turn_order: Vec<String>,
@@ -237,10 +238,14 @@ pub struct Game {
 }
 
 impl Game {
-    /// Creates a new game starting only with the creator (enrollment lobby)
-    /// Players join via enrollment, not via initial construction
+    /// Creates a new game with the creator automatically enrolled
     #[tracing::instrument]
-    pub fn new(creator_id: Uuid, enrollment_timeout_seconds: u64) -> Result<Self, GameError> {
+    pub fn new(creator_id: Uuid, creator_email: String, enrollment_timeout_seconds: u64) -> Result<Self, GameError> {
+        // Validate email is not empty
+        if creator_email.trim().is_empty() {
+            return Err(GameError::InvalidEmail);
+        }
+
         // Initialize 52-card deck (4 of each card type across 4 suits)
         let mut available_cards = Vec::new();
         for suit in SUITS.iter() {
@@ -254,14 +259,20 @@ impl Game {
             }
         }
 
-        // Start with empty players - will be populated during enrollment phase
-        let players = HashMap::new();
-        let turn_order = Vec::new();
+        // Auto-enroll creator as first player
+        let mut players = HashMap::new();
+        players.insert(creator_email.clone(), Player::new(creator_email.clone()));
+        
+        let mut turn_order = Vec::new();
+        turn_order.push(creator_email);
+        
+        let dealer = Player::new("dealer".to_string());
 
         Ok(Self {
             id: Uuid::new_v4(),
             creator_id,
             players,
+            dealer,
             available_cards,
             finished: false,
             turn_order,
@@ -309,6 +320,8 @@ impl Game {
 
         // Check if game should auto-finish
         if self.check_auto_finish() {
+            // All players finished, play dealer automatically
+            self.play_dealer()?;
             self.finished = true;
         }
 
@@ -478,6 +491,8 @@ impl Game {
 
         // Check if game should auto-finish
         if self.check_auto_finish() {
+            // All players finished, play dealer automatically
+            self.play_dealer()?;
             self.finished = true;
         }
 
@@ -493,6 +508,33 @@ impl Game {
         self.players.values().all(|player| {
             player.state == PlayerState::Standing || player.state == PlayerState::Busted
         })
+    }
+
+    /// Plays the dealer's turn (draws until reaching 17 or higher)
+    /// Should be called after all players have finished
+    #[tracing::instrument(skip(self))]
+    pub fn play_dealer(&mut self) -> Result<(), GameError> {
+        if self.finished {
+            return Err(GameError::GameAlreadyFinished);
+        }
+
+        // Dealer draws until reaching 17 or busting
+        while self.dealer.points < 17 && !self.dealer.busted {
+            if self.available_cards.is_empty() {
+                return Err(GameError::DeckEmpty);
+            }
+
+            let random_index = rand::rng().random_range(0..self.available_cards.len());
+            let card = self.available_cards.remove(random_index);
+            self.dealer.add_card(card);
+        }
+
+        // Mark dealer as standing if not busted
+        if !self.dealer.busted {
+            self.dealer.state = PlayerState::Standing;
+        }
+
+        Ok(())
     }
 
     /// Sets the value of an Ace card for a player
@@ -540,6 +582,16 @@ impl Game {
         let mut tied_players: Vec<String> = Vec::new();
         let mut all_players: HashMap<String, PlayerSummary> = HashMap::new();
 
+        // Add dealer to summaries
+        all_players.insert(
+            "dealer".to_string(),
+            PlayerSummary {
+                points: self.dealer.points,
+                cards_count: self.dealer.cards_history.len(),
+                busted: self.dealer.busted,
+            },
+        );
+
         // Build player summaries
         for (email, player) in &self.players {
             all_players.insert(
@@ -552,16 +604,36 @@ impl Game {
             );
         }
 
-        // Find winner(s) - based on determine_winner logic from CLI
+        // Dealer score (0 if busted)
+        let dealer_score = if self.dealer.busted { 0 } else { self.dealer.points };
+
+        // Find winner(s) - players who beat the dealer
         for (email, player) in &self.players {
-            if player.points <= 21 {
-                if player.points == highest_score && highest_score > 0 {
-                    tied_players.push(email.clone());
-                } else if player.points > highest_score {
-                    highest_score = player.points;
-                    winner = Some(email.clone());
-                    tied_players.clear();
+            if !player.busted {
+                // Player didn't bust
+                if dealer_score == 0 {
+                    // Dealer busted, all non-busted players win
+                    if player.points == highest_score && highest_score > 0 {
+                        tied_players.push(email.clone());
+                    } else if player.points > highest_score {
+                        highest_score = player.points;
+                        winner = Some(email.clone());
+                        tied_players.clear();
+                    }
+                } else if player.points > dealer_score {
+                    // Player beat dealer
+                    if player.points == highest_score && highest_score > 0 {
+                        tied_players.push(email.clone());
+                    } else if player.points > highest_score {
+                        highest_score = player.points;
+                        winner = Some(email.clone());
+                        tied_players.clear();
+                    }
+                } else if player.points == dealer_score {
+                    // Push (tie with dealer) - not counted as win
+                    continue;
                 }
+                // else: player lost to dealer, skip
             }
         }
 
