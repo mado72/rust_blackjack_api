@@ -313,6 +313,12 @@ impl From<blackjack_service::GameError> for ApiError {
             GameError::NotGameCreator => {
                 Self::new(StatusCode::FORBIDDEN, "NOT_GAME_CREATOR", "Only the game creator can perform this action")
             }
+            GameError::EnrollmentNotClosed => {
+                Self::new(StatusCode::CONFLICT, "ENROLLMENT_NOT_CLOSED", "Cannot play until enrollment is closed")
+            }
+            GameError::PlayerAlreadyEnrolled => {
+                Self::new(StatusCode::CONFLICT, "PLAYER_ALREADY_ENROLLED", "Player is already enrolled in this game")
+            }
             GameError::CoreError(core_err) => {
                 Self::new(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", core_err.to_string())
             }

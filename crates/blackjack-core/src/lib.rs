@@ -199,6 +199,8 @@ pub enum GameError {
     NotAnAce,
     NotPlayerTurn,
     PlayerNotActive,
+    PlayerAlreadyEnrolled,
+    EnrollmentNotClosed,
 }
 
 impl std::fmt::Display for GameError {
@@ -215,6 +217,8 @@ impl std::fmt::Display for GameError {
             GameError::NotAnAce => write!(f, "Can only change value of Ace cards"),
             GameError::NotPlayerTurn => write!(f, "It's not this player's turn"),
             GameError::PlayerNotActive => write!(f, "Player is not active (standing or busted)"),
+            GameError::PlayerAlreadyEnrolled => write!(f, "Player is already enrolled in this game"),
+            GameError::EnrollmentNotClosed => write!(f, "Cannot play until enrollment is closed"),
         }
     }
 }
@@ -344,7 +348,7 @@ impl Game {
         }
 
         if self.players.contains_key(&email) {
-            return Err(GameError::InvalidEmail);
+            return Err(GameError::PlayerAlreadyEnrolled);
         }
 
         if self.players.len() >= 10 {
