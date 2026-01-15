@@ -1,6 +1,5 @@
 use blackjack_core::{
-    Card, Game, GameError as CoreGameError, GameInvitation, GameResult, 
-    InvitationStatus, User,
+    Card, Game, GameError as CoreGameError, GameInvitation, GameResult, InvitationStatus, User,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -74,8 +73,8 @@ pub struct InvitationConfig {
 impl Default for InvitationConfig {
     fn default() -> Self {
         Self {
-            default_timeout_seconds: 300,  // 5 minutes
-            max_timeout_seconds: 3600,     // 1 hour
+            default_timeout_seconds: 300, // 5 minutes
+            max_timeout_seconds: 3600,    // 1 hour
         }
     }
 }
@@ -83,10 +82,11 @@ impl Default for InvitationConfig {
 impl InvitationConfig {
     /// Load configuration from environment variables with defaults
     pub fn from_env() -> Self {
-        let default_timeout_seconds = std::env::var("BLACKJACK_INVITATIONS_DEFAULT_TIMEOUT_SECONDS")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(300);
+        let default_timeout_seconds =
+            std::env::var("BLACKJACK_INVITATIONS_DEFAULT_TIMEOUT_SECONDS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(300);
 
         let max_timeout_seconds = std::env::var("BLACKJACK_INVITATIONS_MAX_TIMEOUT_SECONDS")
             .ok()
@@ -208,7 +208,7 @@ impl UserService {
     #[tracing::instrument(skip(self, password))]
     pub fn register(&self, email: String, password: String) -> Result<Uuid, GameError> {
         let mut email_index = self.email_index.lock().unwrap();
-        
+
         // Check if user already exists
         if email_index.contains_key(&email) {
             return Err(GameError::UserAlreadyExists);
@@ -216,7 +216,7 @@ impl UserService {
 
         // For now, use a simple placeholder hash (M8 will implement proper hashing)
         let password_hash = format!("placeholder_hash_{}", password);
-        
+
         let user = User::new(email.clone(), password_hash);
         let user_id = user.id;
 
@@ -233,7 +233,9 @@ impl UserService {
     #[tracing::instrument(skip(self, password))]
     pub fn login(&self, email: &str, password: &str) -> Result<User, GameError> {
         let email_index = self.email_index.lock().unwrap();
-        let user_id = email_index.get(email).ok_or(GameError::InvalidCredentials)?;
+        let user_id = email_index
+            .get(email)
+            .ok_or(GameError::InvalidCredentials)?;
 
         let users = self.users.lock().unwrap();
         let user = users.get(user_id).ok_or(GameError::UserNotFound)?;
@@ -296,7 +298,12 @@ impl InvitationService {
         invitee_email: String,
         game_enrollment_expires_at: String,
     ) -> Result<Uuid, GameError> {
-        let invitation = GameInvitation::new(game_id, inviter_id, invitee_email, game_enrollment_expires_at);
+        let invitation = GameInvitation::new(
+            game_id,
+            inviter_id,
+            invitee_email,
+            game_enrollment_expires_at,
+        );
         let invitation_id = invitation.id;
 
         let mut invitations = self.invitations.lock().unwrap();
@@ -326,7 +333,7 @@ impl InvitationService {
         }
 
         invitation.status = InvitationStatus::Accepted;
-        
+
         tracing::info!(invitation_id = %invitation_id, "Invitation accepted");
 
         Ok(invitation.clone())
@@ -341,7 +348,7 @@ impl InvitationService {
             .ok_or(GameError::InvitationNotFound)?;
 
         invitation.status = InvitationStatus::Declined;
-        
+
         tracing::info!(invitation_id = %invitation_id, "Invitation declined");
 
         Ok(())
@@ -440,7 +447,11 @@ impl GameService {
     /// The creator is automatically enrolled in the game
     /// Creator's email is retrieved from the user database
     #[tracing::instrument(skip(self), fields(game_id))]
-    pub fn create_game(&self, creator_id: Uuid, enrollment_timeout_seconds: Option<u64>) -> Result<Uuid, GameError> {
+    pub fn create_game(
+        &self,
+        creator_id: Uuid,
+        enrollment_timeout_seconds: Option<u64>,
+    ) -> Result<Uuid, GameError> {
         // Use provided timeout or default to 300 seconds
         let timeout = enrollment_timeout_seconds.unwrap_or(300);
 
@@ -462,7 +473,10 @@ impl GameService {
     }
 
     /// Lists all open games (in enrollment phase)
-    pub fn get_open_games(&self, exclude_user_id: Option<Uuid>) -> Result<Vec<GameInfo>, GameError> {
+    pub fn get_open_games(
+        &self,
+        exclude_user_id: Option<Uuid>,
+    ) -> Result<Vec<GameInfo>, GameError> {
         let games = self.games.lock().unwrap();
         let now = chrono::Utc::now();
 
@@ -563,11 +577,7 @@ impl GameService {
 
     /// Draws a card for a player in a game
     #[tracing::instrument(skip(self), fields(game_id, player_email))]
-    pub fn draw_card(
-        &self,
-        game_id: Uuid,
-        email: &str,
-    ) -> Result<DrawCardResponse, GameError> {
+    pub fn draw_card(&self, game_id: Uuid, email: &str) -> Result<DrawCardResponse, GameError> {
         let mut games = self.games.lock().unwrap();
         let game = games.get_mut(&game_id).ok_or(GameError::GameNotFound)?;
 

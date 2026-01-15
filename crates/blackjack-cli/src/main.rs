@@ -195,7 +195,7 @@ mod tests {
     #[test]
     fn test_determine_winner_single_winner() {
         // Player 2 wins with 20 points
-        let players_points = vec![15, 20, 18];
+        let players_points = [15, 20, 18];
         // Manual test: verify that player 2 wins
         let mut winner_index: Option<usize> = None;
         let mut highest_points: u8 = 0;
@@ -214,7 +214,7 @@ mod tests {
     #[test]
     fn test_determine_winner_all_bust() {
         // All players exceed 21
-        let players_points = vec![22, 25, 23];
+        let players_points = [22, 25, 23];
         let mut winner_index: Option<usize> = None;
         let mut highest_points: u8 = 0;
 
@@ -231,7 +231,7 @@ mod tests {
     #[test]
     fn test_determine_winner_draw() {
         // Draw between players 1 and 3 with 19 points
-        let players_points = vec![19, 15, 19];
+        let players_points = [19, 15, 19];
         let mut highest_points: u8 = 0;
         let mut draw_players: Vec<usize> = Vec::new();
 
@@ -262,7 +262,7 @@ mod tests {
     #[test]
     fn test_determine_winner_perfect_21() {
         // Player 2 wins with exactly 21 points
-        let players_points = vec![20, 21, 19];
+        let players_points = [20, 21, 19];
         let mut winner_index: Option<usize> = None;
         let mut highest_points: u8 = 0;
 
@@ -315,7 +315,7 @@ mod tests {
     #[test]
     fn test_determine_winner_with_one_player() {
         // A single player with a valid score
-        let players_points = vec![18];
+        let players_points = [18];
         let mut winner_index: Option<usize> = None;
         let mut highest_points: u8 = 0;
 
@@ -333,7 +333,7 @@ mod tests {
     #[test]
     fn test_determine_winner_mixed_bust_and_valid() {
         // Some players exceed 21, others don't
-        let players_points = vec![22, 18, 25, 19];
+        let players_points = [22, 18, 25, 19];
         let mut winner_index: Option<usize> = None;
         let mut highest_points: u8 = 0;
 

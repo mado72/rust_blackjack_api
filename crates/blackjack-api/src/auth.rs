@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 /// JWT (JSON Web Token) claims structure
 ///
 /// This structure represents the payload of a JWT token used for authenticating
-/// users in the Blackjack API. Each token binds a user's email and ID and includes 
+/// users in the Blackjack API. Each token binds a user's email and ID and includes
 /// an expiration timestamp.
 ///
 /// # Security
@@ -41,12 +41,12 @@ pub struct Claims {
     /// - Form the rate limiting key
     /// - Ensure users can only act on their own behalf
     pub user_id: String,
-    
+
     /// User's email address
     ///
     /// The email associated with the user account for reference.
     pub email: String,
-    
+
     /// Token expiration time as Unix timestamp (seconds since epoch)
     ///
     /// The JWT library automatically validates this field. Once the current time

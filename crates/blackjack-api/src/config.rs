@@ -27,7 +27,7 @@ pub struct CorsConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct JwtConfig {
     /// Secret key used for signing and verifying JWT tokens
-    /// 
+    ///
     /// **Security Note**: This should be a strong, randomly generated secret
     /// in production and stored securely (e.g., via environment variables).
     pub secret: String,

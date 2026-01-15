@@ -66,7 +66,7 @@ fn test_create_game_too_many_players() {
     let creator_id = user_service.get_user_by_email(&test_creator_email()).unwrap().id;
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    
+
     // Note: max_players config is not currently enforced (hardcoded at 10 in Game)
     // Creator is already enrolled, can add up to 9 more for total of 10
     let result = service.enroll_player(game_id, "p2@test.com");
@@ -98,7 +98,7 @@ fn test_draw_card() {
     let game_id = service.create_game(creator_id, None).unwrap();
     service.enroll_player(game_id, "player1@test.com").unwrap();
     service.close_enrollment(game_id, creator_id).unwrap();
-    
+
     let result = service.draw_card(game_id, &test_creator_email());
 
     assert!(result.is_ok());
@@ -152,7 +152,7 @@ fn test_get_game_state() {
     let game_id = service.create_game(creator_id, None).unwrap();
     service.enroll_player(game_id, "player1@test.com").unwrap();
     service.enroll_player(game_id, "player2@test.com").unwrap();
-    
+
     let result = service.get_game_state(game_id);
 
     assert!(result.is_ok());
