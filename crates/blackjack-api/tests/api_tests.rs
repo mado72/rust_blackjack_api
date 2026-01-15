@@ -304,6 +304,24 @@ fn test_service_error_conversion() {
     let api_error: ApiError = service_error.into();
     assert_eq!(api_error.status, 400);
     assert_eq!(api_error.code, "DECK_EMPTY");
+    
+    // Test PlayerAlreadyEnrolled -> 409 CONFLICT
+    let service_error = GameError::PlayerAlreadyEnrolled;
+    let api_error: ApiError = service_error.into();
+    assert_eq!(api_error.status, 409);
+    assert_eq!(api_error.code, "PLAYER_ALREADY_ENROLLED");
+    
+    // Test GameNotActive -> 410 GONE
+    let service_error = GameError::GameNotActive;
+    let api_error: ApiError = service_error.into();
+    assert_eq!(api_error.status, 410);
+    assert_eq!(api_error.code, "GAME_NOT_ACTIVE");
+    
+    // Test EnrollmentNotClosed -> 409 CONFLICT
+    let service_error = GameError::EnrollmentNotClosed;
+    let api_error: ApiError = service_error.into();
+    assert_eq!(api_error.status, 409);
+    assert_eq!(api_error.code, "ENROLLMENT_NOT_CLOSED");
 }
 /// Tests UserService creation and basic functionality
 ///

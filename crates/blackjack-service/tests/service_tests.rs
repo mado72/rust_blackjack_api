@@ -262,3 +262,19 @@ fn test_draw_until_deck_empty() {
     let state = service.get_game_state(game_id).unwrap();
     assert!(state.finished || state.cards_in_deck < 52, "Game should have progressed");
 }
+
+#[test]
+fn test_enroll_player_already_enrolled() {
+    use blackjack_service::GameError;
+
+    let (service, user_service) = create_game_service(ServiceConfig::default());
+    let creator_id = user_service.get_user_by_email(&test_creator_email()).unwrap().id;
+
+    let game_id = service.create_game(creator_id, None).unwrap();
+    
+    // Try to enroll creator again (creator is auto-enrolled at game creation)
+    let result = service.enroll_player(game_id, &test_creator_email());
+    
+    // Should get PlayerAlreadyEnrolled error, not CoreError
+    assert!(matches!(result, Err(GameError::PlayerAlreadyEnrolled)));
+}

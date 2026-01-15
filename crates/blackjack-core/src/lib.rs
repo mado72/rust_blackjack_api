@@ -199,7 +199,9 @@ pub enum GameError {
     NotAnAce,
     NotPlayerTurn,
     PlayerNotActive,
+    PlayerAlreadyEnrolled,
     EnrollmentNotClosed,
+    GameNotActive,
 }
 
 impl std::fmt::Display for GameError {
@@ -216,7 +218,9 @@ impl std::fmt::Display for GameError {
             GameError::NotAnAce => write!(f, "Can only change value of Ace cards"),
             GameError::NotPlayerTurn => write!(f, "It's not this player's turn"),
             GameError::PlayerNotActive => write!(f, "Player is not active (standing or busted)"),
+            GameError::PlayerAlreadyEnrolled => write!(f, "Player is already enrolled in this game"),
             GameError::EnrollmentNotClosed => write!(f, "Cannot play until enrollment is closed"),
+            GameError::GameNotActive => write!(f, "Game is not active"),
         }
     }
 }
@@ -237,6 +241,7 @@ pub struct Game {
     pub enrollment_timeout_seconds: u64,
     pub enrollment_start_time: String,
     pub enrollment_closed: bool,
+    pub active: bool,
 }
 
 impl Game {
@@ -282,6 +287,7 @@ impl Game {
             enrollment_timeout_seconds,
             enrollment_start_time: chrono::Utc::now().to_rfc3339(),
             enrollment_closed: false,
+            active: true,
         })
     }
 
@@ -337,6 +343,10 @@ impl Game {
 
     /// Adds a player to the game (from invitation acceptance)
     pub fn add_player(&mut self, email: String) -> Result<(), GameError> {
+        if !self.active {
+            return Err(GameError::GameNotActive);
+        }
+
         if self.finished {
             return Err(GameError::GameAlreadyFinished);
         }
@@ -351,7 +361,7 @@ impl Game {
         }
 
         if self.players.contains_key(&email) {
-            return Err(GameError::InvalidEmail);
+            return Err(GameError::PlayerAlreadyEnrolled);
         }
 
         if self.players.len() >= 10 {

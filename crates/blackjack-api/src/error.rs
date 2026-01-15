@@ -316,6 +316,12 @@ impl From<blackjack_service::GameError> for ApiError {
             GameError::EnrollmentNotClosed => {
                 Self::new(StatusCode::CONFLICT, "ENROLLMENT_NOT_CLOSED", "Cannot play until enrollment is closed")
             }
+            GameError::PlayerAlreadyEnrolled => {
+                Self::new(StatusCode::CONFLICT, "PLAYER_ALREADY_ENROLLED", "Player is already enrolled in this game")
+            }
+            GameError::GameNotActive => {
+                Self::new(StatusCode::GONE, "GAME_NOT_ACTIVE", "Game is not active or has been deleted")
+            }
             GameError::CoreError(core_err) => {
                 Self::new(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", core_err.to_string())
             }
