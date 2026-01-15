@@ -642,3 +642,136 @@ fn test_jwt_expiration_validation_is_in_middleware() {
     // This test serves as documentation only
     assert!(true, "JWT expiration is validated in auth_middleware");
 }
+
+/// Tests that stand endpoint returns 409 when it's not the player's turn
+///
+/// Validates:
+/// - Stand endpoint checks current turn before processing
+/// - Returns CONFLICT (409) status
+/// - Returns NOT_YOUR_TURN error code
+/// - Returns appropriate error message
+#[tokio::test]
+async fn test_stand_not_your_turn() {
+    use axum::extract::State as AxumState;
+    use axum::extract::Path;
+    use axum::Extension;
+    use blackjack_api::auth::Claims;
+    use blackjack_api::handlers::stand;
+
+    // Setup AppState
+    let user_service = Arc::new(UserService::new());
+    let config = Arc::new(blackjack_api::config::AppConfig::from_file().unwrap());
+    let game_service = Arc::new(GameService::new(
+        ServiceConfig::default(),
+        user_service.clone(),
+    ));
+    let invitation_service = Arc::new(InvitationService::new(InvitationConfig::default()));
+    let rate_limiter = blackjack_api::rate_limiter::RateLimiter::new(10);
+
+    let state = AppState {
+        game_service: game_service.clone(),
+        user_service: user_service.clone(),
+        invitation_service,
+        config,
+        rate_limiter,
+    };
+
+    // Create two users
+    let user1_id = user_service.register("player1@example.com".to_string(), "pass123".to_string()).unwrap();
+    let user2_id = user_service.register("player2@example.com".to_string(), "pass123".to_string()).unwrap();
+
+    // Create game with player1
+    let game_id = game_service.create_game(user1_id, None).unwrap();
+    
+    // Enroll player2
+    game_service.enroll_player(game_id, user2_id).unwrap();
+    
+    // Close enrollment
+    game_service.close_enrollment(game_id, user1_id).unwrap();
+
+    // Current turn is player1, but player2 tries to stand
+    let claims = Claims {
+        user_id: user2_id.to_string(),
+        email: "player2@example.com".to_string(),
+        exp: (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp() as usize,
+    };
+
+    let result = stand(
+        AxumState(state),
+        Extension(claims),
+        Path(game_id),
+    )
+    .await;
+
+    assert!(result.is_err(), "Should reject stand when not player's turn");
+
+    let error = result.unwrap_err();
+    assert_eq!(error.status, 409, "Should return 409 Conflict");
+    assert_eq!(error.code, "NOT_YOUR_TURN", "Should return NOT_YOUR_TURN code");
+    assert_eq!(error.message, "It's not your turn", "Should return appropriate message");
+}
+
+/// Tests that draw_card endpoint returns 409 when game is already finished
+///
+/// Validates:
+/// - Draw card endpoint properly handles finished games
+/// - Returns CONFLICT (409) status
+/// - Returns GAME_FINISHED error code
+/// - Returns appropriate error message
+#[tokio::test]
+async fn test_draw_card_game_already_finished() {
+    use axum::extract::State as AxumState;
+    use axum::extract::Path;
+    use axum::Extension;
+    use blackjack_api::auth::Claims;
+    use blackjack_api::handlers::draw_card;
+
+    // Setup AppState
+    let user_service = Arc::new(UserService::new());
+    let config = Arc::new(blackjack_api::config::AppConfig::from_file().unwrap());
+    let game_service = Arc::new(GameService::new(
+        ServiceConfig::default(),
+        user_service.clone(),
+    ));
+    let invitation_service = Arc::new(InvitationService::new(InvitationConfig::default()));
+    let rate_limiter = blackjack_api::rate_limiter::RateLimiter::new(10);
+
+    let state = AppState {
+        game_service: game_service.clone(),
+        user_service: user_service.clone(),
+        invitation_service,
+        config,
+        rate_limiter,
+    };
+
+    // Create user and game
+    let user_id = user_service.register("player1@example.com".to_string(), "pass123".to_string()).unwrap();
+    let game_id = game_service.create_game(user_id, None).unwrap();
+    
+    // Close enrollment
+    game_service.close_enrollment(game_id, user_id).unwrap();
+    
+    // Finish the game
+    game_service.finish_game(game_id).unwrap();
+
+    // Try to draw card after game is finished
+    let claims = Claims {
+        user_id: user_id.to_string(),
+        email: "player1@example.com".to_string(),
+        exp: (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp() as usize,
+    };
+
+    let result = draw_card(
+        AxumState(state),
+        Extension(claims),
+        Path(game_id),
+    )
+    .await;
+
+    assert!(result.is_err(), "Should reject draw card when game is finished");
+
+    let error = result.unwrap_err();
+    assert_eq!(error.status, 409, "Should return 409 Conflict");
+    assert_eq!(error.code, "GAME_FINISHED", "Should return GAME_FINISHED code");
+    assert_eq!(error.message, "Game has already finished", "Should return appropriate message");
+}

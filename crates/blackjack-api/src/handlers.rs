@@ -827,6 +827,16 @@ pub async fn draw_card(
 ) -> Result<Json<DrawCardResponse>, ApiError> {
     // Validate it's the player's turn
     let game_state = state.game_service.get_game_state(game_id)?;
+    
+    // Check if game is already finished
+    if game_state.finished {
+        return Err(ApiError::new(
+            StatusCode::CONFLICT,
+            "GAME_FINISHED",
+            "Game has already finished",
+        ));
+    }
+    
     if let Some(current_player) = game_state.current_turn_player
         && current_player != claims.email
     {
@@ -1702,15 +1712,24 @@ pub struct EnrollPlayerResponse {
 ///   -H "Content-Type: application/json" \
 ///   -d '{"email": "player@example.com"}'
 /// ```
-#[tracing::instrument(skip(state, _claims), fields(game_id, player_email = %payload.email))]
+#[tracing::instrument(skip(state, claims), fields(game_id, user_id = %claims.user_id))]
 pub async fn enroll_player(
     State(state): State<crate::AppState>,
-    Extension(_claims): Extension<Claims>,
+    Extension(claims): Extension<Claims>,
     Path(game_id): Path<Uuid>,
-    Json(payload): Json<EnrollPlayerRequest>,
+    Json(_payload): Json<EnrollPlayerRequest>,
 ) -> Result<Json<EnrollPlayerResponse>, ApiError> {
-    // Enroll the player
-    state.game_service.enroll_player(game_id, &payload.email)?;
+    // Parse user_id from JWT claims
+    let user_id = Uuid::parse_str(&claims.user_id).map_err(|_| {
+        ApiError::new(
+            StatusCode::BAD_REQUEST,
+            "INVALID_USER_ID",
+            "Invalid user ID format in token",
+        )
+    })?;
+
+    // Enroll the player using user_id
+    state.game_service.enroll_player(game_id, user_id)?;
 
     // Get updated game state to return enrolled count
     let game_state = state.game_service.get_game_state(game_id)?;
@@ -1718,14 +1737,15 @@ pub async fn enroll_player(
 
     tracing::info!(
         game_id = %game_id,
-        email = %payload.email,
+        user_id = %user_id,
+        email = %claims.email,
         enrolled_count = enrolled_count,
         "Player enrolled successfully"
     );
 
     Ok(Json(EnrollPlayerResponse {
         game_id,
-        email: payload.email,
+        email: claims.email,
         message: "Player enrolled successfully".to_string(),
         enrolled_count,
     }))

@@ -75,11 +75,14 @@ fn test_create_game_too_many_players() {
 
     // Note: max_players config is not currently enforced (hardcoded at 10 in Game)
     // Creator is already enrolled, can add up to 9 more for total of 10
-    let result = service.enroll_player(game_id, "p2@test.com");
+    let p2_id = user_service.register("p2@test.com".to_string(), "pass123".to_string()).unwrap();
+    let result = service.enroll_player(game_id, p2_id);
     assert!(result.is_ok()); // Should succeed (total 2)
-    let result = service.enroll_player(game_id, "p3@test.com");
+    let p3_id = user_service.register("p3@test.com".to_string(), "pass123".to_string()).unwrap();
+    let result = service.enroll_player(game_id, p3_id);
     assert!(result.is_ok()); // Should succeed (total 3)
-    let result = service.enroll_player(game_id, "p4@test.com");
+    let p4_id = user_service.register("p4@test.com".to_string(), "pass123".to_string()).unwrap();
+    let result = service.enroll_player(game_id, p4_id);
     assert!(result.is_ok()); // Should succeed (total 4, config max_players not enforced yet)
 }
 
@@ -108,7 +111,8 @@ fn test_draw_card() {
         .id;
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    service.enroll_player(game_id, "player1@test.com").unwrap();
+    let player1_id = user_service.register("player1@test.com".to_string(), "pass123".to_string()).unwrap();
+    service.enroll_player(game_id, player1_id).unwrap();
     service.close_enrollment(game_id, creator_id).unwrap();
 
     let result = service.draw_card(game_id, &test_creator_email());
@@ -137,7 +141,8 @@ fn test_set_ace_value() {
         .id;
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    service.enroll_player(game_id, "player1@test.com").unwrap();
+    let player1_id = user_service.register("player1@test.com".to_string(), "pass123".to_string()).unwrap();
+    service.enroll_player(game_id, player1_id).unwrap();
     service.close_enrollment(game_id, creator_id).unwrap();
 
     let mut ace_card_id = None;
@@ -168,8 +173,10 @@ fn test_get_game_state() {
         .id;
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    service.enroll_player(game_id, "player1@test.com").unwrap();
-    service.enroll_player(game_id, "player2@test.com").unwrap();
+    let player1_id = user_service.register("player1@test.com".to_string(), "pass123".to_string()).unwrap();
+    let player2_id = user_service.register("player2@test.com".to_string(), "pass123".to_string()).unwrap();
+    service.enroll_player(game_id, player1_id).unwrap();
+    service.enroll_player(game_id, player2_id).unwrap();
 
     let result = service.get_game_state(game_id);
 
@@ -189,8 +196,10 @@ fn test_finish_game() {
         .id;
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    service.enroll_player(game_id, "player1@test.com").unwrap();
-    service.enroll_player(game_id, "player2@test.com").unwrap();
+    let player1_id = user_service.register("player1@test.com".to_string(), "pass123".to_string()).unwrap();
+    let player2_id = user_service.register("player2@test.com".to_string(), "pass123".to_string()).unwrap();
+    service.enroll_player(game_id, player1_id).unwrap();
+    service.enroll_player(game_id, player2_id).unwrap();
 
     let _ = service.draw_card(game_id, &test_creator_email());
     let _ = service.draw_card(game_id, "player1@test.com");
@@ -216,8 +225,10 @@ fn test_concurrent_access() {
     let service = Arc::new(game_service);
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    service.enroll_player(game_id, "player1@test.com").unwrap();
-    service.enroll_player(game_id, "player2@test.com").unwrap();
+    let player1_id = user_service.register("player1@test.com".to_string(), "pass123".to_string()).unwrap();
+    let player2_id = user_service.register("player2@test.com".to_string(), "pass123".to_string()).unwrap();
+    service.enroll_player(game_id, player1_id).unwrap();
+    service.enroll_player(game_id, player2_id).unwrap();
     service.close_enrollment(game_id, creator_id).unwrap();
 
     let mut handles = vec![];
@@ -258,7 +269,8 @@ fn test_draw_until_deck_empty() {
         .id;
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    service.enroll_player(game_id, "player1@test.com").unwrap();
+    let player1_id = user_service.register("player1@test.com".to_string(), "pass123".to_string()).unwrap();
+    service.enroll_player(game_id, player1_id).unwrap();
     service.close_enrollment(game_id, creator_id).unwrap();
 
     // With turn management and dealer auto-play, the game will finish when all players complete
@@ -305,7 +317,7 @@ fn test_enroll_player_already_enrolled() {
     let game_id = service.create_game(creator_id, None).unwrap();
 
     // Try to enroll creator again (creator is auto-enrolled at game creation)
-    let result = service.enroll_player(game_id, &test_creator_email());
+    let result = service.enroll_player(game_id, creator_id);
 
     // Should get PlayerAlreadyEnrolled error, not CoreError
     assert!(matches!(result, Err(GameError::PlayerAlreadyEnrolled)));

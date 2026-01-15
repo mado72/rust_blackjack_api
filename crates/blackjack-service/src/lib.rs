@@ -524,8 +524,8 @@ impl GameService {
     }
 
     /// Enrolls a player in a game
-    #[tracing::instrument(skip(self), fields(game_id, player_email))]
-    pub fn enroll_player(&self, game_id: Uuid, player_email: &str) -> Result<(), GameError> {
+    #[tracing::instrument(skip(self), fields(game_id, user_id))]
+    pub fn enroll_player(&self, game_id: Uuid, user_id: Uuid) -> Result<(), GameError> {
         let mut games = self.games.lock().unwrap();
         let game = games.get_mut(&game_id).ok_or(GameError::GameNotFound)?;
 
@@ -539,8 +539,12 @@ impl GameService {
             return Err(GameError::GameFull);
         }
 
+        // Get user email from user service
+        let user = self.user_service.get_user(user_id)?;
+        let player_email = user.email.clone();
+
         // Add player - explicitly map core errors to service errors
-        game.add_player(player_email.to_string())
+        game.add_player(player_email.clone())
             .map_err(|e| match e {
                 CoreGameError::GameNotActive => GameError::GameNotActive,
                 CoreGameError::PlayerAlreadyEnrolled => GameError::PlayerAlreadyEnrolled,
@@ -549,7 +553,8 @@ impl GameService {
 
         tracing::info!(
             game_id = %game_id,
-            player_email = player_email,
+            user_id = %user_id,
+            player_email = %player_email,
             enrolled_count = game.players.len(),
             "Player enrolled in game"
         );
