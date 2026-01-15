@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Blackjack API",
-    "description": "Coleção completa de endpoints para testar a API Blackjack Multi-Player\n\n✅ STATUS M7 FASE 1: Enrollment endpoints DISPONÍVEIS (Jan 10, 2026)\n\n✅ Milestone 7 - FASE 1 (Enrollment) - COMPLETO:\n- POST /api/v1/games (Create Game com enrollment)\n- GET /api/v1/games/open (List Open Games)\n- POST /api/v1/games/:game_id/enroll (Enroll Player)\n- POST /api/v1/games/:game_id/close-enrollment (Close Enrollment)\n\n✅ Milestone 6 - COMPLETO:\n- Todos os 9 endpoints M6 estão FUNCIONAIS\n\nVer IMPLEMENTATION_STATUS.md para detalhes sobre próximas fases (M7 FASE 2-4).",
+    "name": "Blackjack API - Enhanced with Dealer & Scoring",
+    "description": "Coleção completa de endpoints para testar a API Blackjack Multi-Player\n\n✅ STATUS: January 15, 2026\n✅ Milestones 1-7 COMPLETE + Dealer Auto-Play + Enhanced Scoring\n✅ Tests: 106 passing (60 integration tests in core)\n\n**Features:**\n- Complete game flow: Enrollment → Turns → Auto Dealer → Results\n- Automatic dealer play when all players finish\n- Enhanced scoring with per-player outcomes (Won/Lost/Push/Busted)\n- Two-player concurrent testing with separate environments\n\n**Testing Setup:**\n1. Import both environment files: Player1 and Player2\n2. Open two Postman windows/tabs\n3. Window 1: Select 'Blackjack Player 1' environment\n4. Window 2: Select 'Blackjack Player 2' environment\n5. Both share game_id via collection variables\n\n**Workflow:**\n- Player 1 creates game → game_id shared via collection variable\n- Player 2 enrolls using shared game_id\n- Both play turns concurrently\n- Last player to stand triggers automatic dealer play\n- Get results shows detailed outcomes for each player\n\nVer IMPLEMENTATION_STATUS.md e DEALER_IMPLEMENTATION.md para detalhes.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -18,42 +18,26 @@
     {
       "key": "base_url",
       "value": "http://localhost:8080",
-      "type": "string"
-    },
-    {
-      "key": "jwt_token",
-      "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "API base URL"
     },
     {
       "key": "game_id",
       "value": "",
-      "type": "string"
-    },
-    {
-      "key": "player_email",
-      "value": "player1@example.com",
-      "type": "string"
-    },
-    {
-      "key": "card_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "user_id",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "invitation_id",
-      "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "Shared across all players - set by game creator"
     },
     {
       "key": "creator_id",
       "value": "",
-      "type": "string"
+      "type": "string",
+      "description": "Game creator user ID - shared"
+    },
+    {
+      "key": "invitation_id",
+      "value": "",
+      "type": "string",
+      "description": "Shared invitation ID"
     }
   ],
   "item": [
@@ -101,13 +85,12 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Salva o user_id e email para uso posterior",
+                  "// Salva o user_id no environment (específico de cada player)",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set('user_id', response.user_id);",
-                  "    pm.collectionVariables.set('player_email', response.email);",
-                  "    console.log('User ID salvo:', response.user_id);",
-                  "    console.log('Email salvo:', response.email);",
+                  "    pm.environment.set('user_id', response.user_id);",
+                  "    console.log('User ID salvo no environment:', response.user_id);",
+                  "    console.log('Email:', response.email);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -145,11 +128,11 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Extrai e salva o token JWT automaticamente",
+                  "// Extrai e salva o token JWT no environment (específico de cada player)",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
-                  "    pm.collectionVariables.set('jwt_token', response.token);",
-                  "    console.log('Token JWT salvo:', response.token);",
+                  "    pm.environment.set('jwt_token', response.token);",
+                  "    console.log('Token JWT salvo no environment');",
                   "    console.log('Expira em:', response.expires_in, 'segundos');",
                   "}"
                 ],
@@ -170,7 +153,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{player_email}}\",\n  \"password\": \"SecurePassword123!\"\n}"
+              "raw": "{\n  \"email\": \"{{player_email}}\",\n  \"password\": \"{{player_password}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/login",
@@ -194,15 +177,17 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Salva o game_id e creator_id automaticamente",
+                  "// Salva o game_id e creator_id em COLLECTION variables (compartilhado entre players)",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    pm.collectionVariables.set('game_id', response.game_id);",
-                      "    pm.collectionVariables.set('creator_id', response.creator_id);",
-                  "    console.log('Game ID salvo:', response.game_id);",
-                  "    console.log('Creator ID salvo:', response.creator_id);",
+                  "    pm.collectionVariables.set('creator_id', response.creator_id);",
+                  "    console.log('✅ Game ID salvo (SHARED):', response.game_id);",
+                  "    console.log('✅ Creator ID salvo (SHARED):', response.creator_id);",
                   "    console.log('Status:', response.game_phase);",
                   "    console.log('Enrollment expira em:', response.enrollment_timeout);",
+                  "    console.log('');",
+                  "    console.log('🎮 NEXT: Player 2 pode agora se inscrever usando este game_id');",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -346,6 +331,47 @@
         },
         {
           "name": "Get Game Results",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Display enhanced scoring results",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    ",
+                  "    console.log('🏆 GAME RESULTS');",
+                  "    console.log('================');",
+                  "    ",
+                  "    // Dealer info",
+                  "    console.log('');",
+                  "    console.log('🎰 Dealer:', response.dealer_points, 'points', response.dealer_busted ? '(BUSTED)' : '');",
+                  "    ",
+                  "    // Winner info",
+                  "    console.log('');",
+                  "    if (response.winner) {",
+                  "        console.log('👑 Winner:', response.winner, 'with', response.highest_score, 'points');",
+                  "    } else if (response.tied_players && response.tied_players.length > 0) {",
+                  "        console.log('🤝 Tie between', response.tied_players.length, 'players with', response.highest_score, 'points');",
+                  "        response.tied_players.forEach(p => console.log('   -', p));",
+                  "    } else {",
+                  "        console.log('😔 No winners (all busted or all lost)');",
+                  "    }",
+                  "    ",
+                  "    // Individual outcomes",
+                  "    console.log('');",
+                  "    console.log('📊 Individual Outcomes:');",
+                  "    Object.keys(response.player_results || {}).forEach(email => {",
+                  "        const result = response.player_results[email];",
+                  "        const icon = result.outcome === 'Won' ? '✅' : result.outcome === 'Lost' ? '❌' : result.outcome === 'Push' ? '🤝' : '💥';",
+                  "        console.log(`   ${icon} ${email}: ${result.points} points - ${result.outcome}${result.busted ? ' (BUSTED)' : ''}`);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -354,7 +380,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games", "{{game_id}}", "results"]
             },
-            "description": "Retorna os resultados de um jogo finalizado.\n\n**Só funciona se o jogo já foi finalizado**\n\n**Response:**\n- Vencedor\n- Jogadores empatados\n- Pontuação final de todos\n\n**Requer autenticação JWT**"
+            "description": "**Get detailed game results with enhanced scoring**\n\n✅ **ENHANCED RESPONSE (January 15, 2026):**\n\n**Legacy fields (backward compatible):**\n- `winner`: Email of single winner (null if tie)\n- `tied_players`: Array of emails if multiple winners\n- `highest_score`: Highest winning score\n- `all_players`: HashMap with basic player summaries\n\n**NEW - Detailed per-player outcomes:**\n- `player_results`: HashMap<email, PlayerResult>\n  - `points`: Final score\n  - `cards_count`: Number of cards\n  - `busted`: Whether player busted\n  - `outcome`: **Won** | **Lost** | **Push** | **Busted**\n\n- `dealer_points`: Dealer's final score\n- `dealer_busted`: Whether dealer busted\n\n**Outcome Definitions:**\n- **Won**: Player beat dealer\n- **Lost**: Dealer beat player\n- **Push**: Tied with dealer (same points)\n- **Busted**: Player exceeded 21\n\n**Only works if game is finished**\n\n**Requires JWT authentication**"
           },
           "response": []
         }
@@ -369,12 +395,12 @@
           "event": [
             {
               "listen": "test",
-              "script": {
-                "exec": [
-                  "// Salva o card_id da última carta comprada (útil para testar Set Ace Value)",
+              "script": {card_id no ENVIRONMENT (cada player tem suas próprias cartas)",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    if (response.card && response.card.name === 'Ace') {",
+                  "        pm.environment.set('card_id', response.card.id);",
+                  "        console.log('♠️  && response.card.name === 'Ace') {",
                   "        pm.collectionVariables.set('card_id', response.card.id);",
                   "        console.log('Ás comprado! Card ID salvo:', response.card.id);",
                   "    }",
@@ -423,8 +449,31 @@
           },
           "response": []
         },
-        {
-          "name": "Stand",
+        {event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Check if dealer auto-played and game finished",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('✅ Player stood with', response.points, 'points');",
+                  "    console.log('Busted:', response.busted);",
+                  "    ",
+                  "    if (response.game_finished) {",
+                  "        console.log('');",
+                  "        console.log('🎲 GAME FINISHED! Dealer auto-played!');",
+                  "        console.log('📊 Use GET /results to see detailed outcomes');",
+                  "    } else {",
+                  "        console.log('');",
+                  "        console.log('⏳ Waiting for other players to finish...');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [],
@@ -432,6 +481,8 @@
               "raw": "{{base_url}}/api/v1/games/{{game_id}}/stand",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games", "{{game_id}}", "stand"]
+            },
+            "description": "**Player stands (stops drawing cards)**\n\n✅ **AUTOMATIC DEALER PLAY:**\nWhen the LAST player stands, the dealer automatically plays!\n- Dealer draws until reaching 17+ points\n- Game finishes automatically\n- Results become available\n\n**Response:**\n- Player's final points\n- Whether player busted\n- `game_finished`: true if dealer played and game completed\n- Message indicating next step\n\n**Requires JWT authentication**\n\n**Multi-player Testing:**\n1. Player 1 stands → game_finished: false\n2. Player 2 stands → game_finished: TRUE, dealer auto-plays\n3. GET /results → see detailed outcomes for each player
             },
             "description": "Jogador fica de pé (para de comprar cartas).\n\n**Response:**\n- Pontos atuais do jogador\n- Se o jogador estourou\n- Mensagem de sucesso\n- Se o jogo foi finalizado automaticamente (quando todos os jogadores terminaram)\n\n**Requer autenticação JWT**\n\n**Nota:** Se todos os jogadores ficarem de pé ou estourarem, o jogo é finalizado automaticamente."
           },
