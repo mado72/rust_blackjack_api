@@ -406,6 +406,63 @@ impl UserService {
 
         Ok(())
     }
+
+    /// Deactivates a user account (Milestone 8)
+    ///
+    /// Sets the account status to inactive, preventing login.
+    /// Used for account suspension or administrative actions.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_id` - The user to deactivate
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Account deactivated successfully
+    /// * `Err(GameError::UserNotFound)` - User doesn't exist
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// user_service.deactivate_account(user_id)?;
+    /// // User can no longer login
+    /// ```
+    #[tracing::instrument(skip(self))]
+    pub fn deactivate_account(&self, user_id: Uuid) -> Result<(), GameError> {
+        let mut users = self.users.lock().unwrap();
+        let user = users.get_mut(&user_id).ok_or(GameError::UserNotFound)?;
+
+        user.deactivate();
+
+        tracing::info!(user_id = %user_id, "Account deactivated");
+
+        Ok(())
+    }
+
+    /// Activates a user account (Milestone 8)
+    ///
+    /// Sets the account status to active, allowing login.
+    /// Used to restore previously deactivated accounts.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_id` - The user to activate
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Account activated successfully
+    /// * `Err(GameError::UserNotFound)` - User doesn't exist
+    #[tracing::instrument(skip(self))]
+    pub fn activate_account(&self, user_id: Uuid) -> Result<(), GameError> {
+        let mut users = self.users.lock().unwrap();
+        let user = users.get_mut(&user_id).ok_or(GameError::UserNotFound)?;
+
+        user.activate();
+
+        tracing::info!(user_id = %user_id, "Account activated");
+
+        Ok(())
+    }
 }
 
 impl Default for UserService {
@@ -724,6 +781,9 @@ impl GameService {
                 CoreGameError::PlayerAlreadyEnrolled => GameError::PlayerAlreadyEnrolled,
                 other => GameError::CoreError(other),
             })?;
+
+        // Add to participants with Player role (M8: RBAC)
+        game.add_participant(user_id, player_email.clone());
 
         tracing::info!(
             game_id = %game_id,

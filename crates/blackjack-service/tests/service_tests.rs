@@ -1,4 +1,4 @@
-use blackjack_service::{GameService, ServiceConfig, UserService};
+use blackjack_service::{GameError, GameService, ServiceConfig, UserService};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -334,4 +334,245 @@ fn test_enroll_player_already_enrolled() {
 
     // Should get PlayerAlreadyEnrolled error, not CoreError
     assert!(matches!(result, Err(GameError::PlayerAlreadyEnrolled)));
+}
+
+// ============================================================================
+// M8: Security Tests
+// ============================================================================
+
+#[test]
+fn test_weak_password_rejected() {
+    let user_service = UserService::new();
+
+    // Too short (< 8 chars)
+    let result = user_service.register("user@test.com".to_string(), "Short1!".to_string());
+    assert!(matches!(result, Err(GameError::WeakPassword(_))));
+
+    // Missing uppercase
+    let result = user_service.register("user@test.com".to_string(), "lowercase1!".to_string());
+    assert!(matches!(result, Err(GameError::WeakPassword(_))));
+
+    // Missing lowercase
+    let result = user_service.register("user@test.com".to_string(), "UPPERCASE1!".to_string());
+    assert!(matches!(result, Err(GameError::WeakPassword(_))));
+
+    // Missing digit
+    let result = user_service.register("user@test.com".to_string(), "NoDigits!".to_string());
+    assert!(matches!(result, Err(GameError::WeakPassword(_))));
+
+    // Missing special character
+    let result = user_service.register("user@test.com".to_string(), "NoSpecial1".to_string());
+    assert!(matches!(result, Err(GameError::WeakPassword(_))));
+
+    // Valid password should work
+    let result = user_service.register("user@test.com".to_string(), "ValidP@ss1".to_string());
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_invalid_email_rejected() {
+    let user_service = UserService::new();
+
+    // Missing @
+    let result = user_service.register("notanemail".to_string(), "TestP@ssw0rd".to_string());
+    assert!(matches!(result, Err(GameError::ValidationError(_))));
+
+    // Missing domain
+    let result = user_service.register("user@".to_string(), "TestP@ssw0rd".to_string());
+    assert!(matches!(result, Err(GameError::ValidationError(_))));
+
+    // Missing local part
+    let result = user_service.register("@example.com".to_string(), "TestP@ssw0rd".to_string());
+    assert!(matches!(result, Err(GameError::ValidationError(_))));
+
+    // Valid email should work
+    let result = user_service.register("user@test.com".to_string(), "TestP@ssw0rd".to_string());
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_failed_login_with_wrong_password() {
+    let user_service = UserService::new();
+
+    // Register user
+    user_service
+        .register("user@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
+
+    // Try to login with wrong password
+    let result = user_service.login("user@test.com", "WrongP@ssw0rd");
+    assert!(matches!(result, Err(GameError::InvalidCredentials)));
+}
+
+#[test]
+fn test_change_password_requires_old_password() {
+    let user_service = UserService::new();
+
+    // Register user
+    let user_id = user_service
+        .register("user@test.com".to_string(), "OldP@ssw0rd".to_string())
+        .unwrap();
+
+    // Try to change password with wrong old password
+    let result = user_service.change_password(user_id, "WrongOldP@ssw0rd", "NewP@ssw0rd");
+    assert!(matches!(result, Err(GameError::InvalidCredentials)));
+
+    // Change password with correct old password
+    let result = user_service.change_password(user_id, "OldP@ssw0rd", "NewP@ssw0rd");
+    assert!(result.is_ok());
+
+    // Old password should no longer work
+    let result = user_service.login("user@test.com", "OldP@ssw0rd");
+    assert!(matches!(result, Err(GameError::InvalidCredentials)));
+
+    // New password should work
+    let result = user_service.login("user@test.com", "NewP@ssw0rd");
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_change_password_validates_new_password() {
+    let user_service = UserService::new();
+
+    let user_id = user_service
+        .register("user@test.com".to_string(), "OldP@ssw0rd".to_string())
+        .unwrap();
+
+    // Try to change to weak password
+    let result = user_service.change_password(user_id, "OldP@ssw0rd", "weak");
+    assert!(matches!(result, Err(GameError::WeakPassword(_))));
+}
+
+#[test]
+fn test_rbac_only_creator_can_close_enrollment() {
+    let (service, user_service) = create_game_service(ServiceConfig::default());
+    let creator_id = user_service
+        .get_user_by_email(&test_creator_email())
+        .unwrap()
+        .id;
+
+    let game_id = service.create_game(creator_id, None).unwrap();
+
+    // Enroll another player
+    let player_id = user_service
+        .register("player@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
+    service.enroll_player(game_id, player_id).unwrap();
+
+    // Player should not be able to close enrollment
+    let result = service.close_enrollment(game_id, player_id);
+    assert!(matches!(result, Err(GameError::InsufficientPermissions)));
+
+    // Creator should be able to close enrollment
+    let result = service.close_enrollment(game_id, creator_id);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_rbac_only_creator_can_finish_game() {
+    let (service, user_service) = create_game_service(ServiceConfig::default());
+    let creator_id = user_service
+        .get_user_by_email(&test_creator_email())
+        .unwrap()
+        .id;
+
+    let game_id = service.create_game(creator_id, None).unwrap();
+
+    // Enroll another player
+    let player_id = user_service
+        .register("player@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
+    service.enroll_player(game_id, player_id).unwrap();
+
+    // Close enrollment as creator
+    service.close_enrollment(game_id, creator_id).unwrap();
+
+    // Player should not be able to finish game
+    let result = service.finish_game(game_id, player_id);
+    assert!(matches!(result, Err(GameError::InsufficientPermissions)));
+
+    // Creator should be able to finish game
+    let result = service.finish_game(game_id, creator_id);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_rbac_only_creator_can_kick_players() {
+    let (service, user_service) = create_game_service(ServiceConfig::default());
+    let creator_id = user_service
+        .get_user_by_email(&test_creator_email())
+        .unwrap()
+        .id;
+
+    let game_id = service.create_game(creator_id, None).unwrap();
+
+    // Enroll two players
+    let player1_id = user_service
+        .register("player1@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
+    let player2_id = user_service
+        .register("player2@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
+    service.enroll_player(game_id, player1_id).unwrap();
+    service.enroll_player(game_id, player2_id).unwrap();
+
+    // Player1 should not be able to kick player2
+    let result = service.kick_player(game_id, player1_id, player2_id);
+    assert!(matches!(result, Err(GameError::InsufficientPermissions)));
+
+    // Creator should be able to kick player1
+    let result = service.kick_player(game_id, creator_id, player1_id);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), "player1@test.com");
+}
+
+#[test]
+fn test_rbac_cannot_kick_creator() {
+    let (service, user_service) = create_game_service(ServiceConfig::default());
+    let creator_id = user_service
+        .get_user_by_email(&test_creator_email())
+        .unwrap()
+        .id;
+
+    let game_id = service.create_game(creator_id, None).unwrap();
+
+    // Try to kick creator (should fail even as creator)
+    let result = service.kick_player(game_id, creator_id, creator_id);
+    assert!(matches!(
+        result,
+        Err(GameError::CoreError(blackjack_core::GameError::CannotKickCreator))
+    ));
+}
+
+#[test]
+fn test_account_status_inactive_cannot_login() {
+    let user_service = UserService::new();
+
+    // Register user
+    let user_id = user_service
+        .register("user@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
+
+    // Deactivate account
+    user_service.deactivate_account(user_id).unwrap();
+
+    // Try to login with inactive account
+    let result = user_service.login("user@test.com", "TestP@ssw0rd");
+    assert!(matches!(result, Err(GameError::AccountInactive)));
+}
+
+#[test]
+fn test_last_login_updated_on_successful_login() {
+    let user_service = UserService::new();
+
+    // Register user
+    user_service
+        .register("user@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
+
+    // Login
+    let user = user_service.login("user@test.com", "TestP@ssw0rd").unwrap();
+
+    // last_login should be set
+    assert!(user.last_login.is_some());
 }
