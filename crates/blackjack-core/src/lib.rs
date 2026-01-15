@@ -179,13 +179,42 @@ pub struct PlayerSummary {
     pub busted: bool,
 }
 
+/// Player outcome in a finished game
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum PlayerOutcome {
+    Won,
+    Lost,
+    Push,
+    Busted,
+}
+
+/// Detailed result information for a player
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlayerResult {
+    pub points: u8,
+    pub cards_count: usize,
+    pub busted: bool,
+    pub outcome: PlayerOutcome,
+}
+
 /// Result of a finished game
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameResult {
+    /// Email of the single winner (if no ties)
     pub winner: Option<String>,
+    /// List of players who tied for the win
     pub tied_players: Vec<String>,
+    /// Highest non-busted score
     pub highest_score: u8,
+    /// All player summaries (including dealer)
     pub all_players: HashMap<String, PlayerSummary>,
+    /// Detailed results for each player
+    pub player_results: HashMap<String, PlayerResult>,
+    /// Dealer's final points
+    pub dealer_points: u8,
+    /// Whether dealer busted
+    pub dealer_busted: bool,
 }
 
 /// Errors that can occur during game operations
@@ -676,6 +705,7 @@ impl Game {
         let mut highest_score: u8 = 0;
         let mut tied_players: Vec<String> = Vec::new();
         let mut all_players: HashMap<String, PlayerSummary> = HashMap::new();
+        let mut player_results: HashMap<String, PlayerResult> = HashMap::new();
 
         // Add dealer to summaries
         all_players.insert(
@@ -706,10 +736,36 @@ impl Game {
             self.dealer.points
         };
 
-        // Find winner(s) - players who beat the dealer
+        // Calculate individual player results and find winner(s)
         for (email, player) in &self.players {
+            let outcome = if player.busted {
+                PlayerOutcome::Busted
+            } else if dealer_score == 0 {
+                // Dealer busted, all non-busted players win
+                PlayerOutcome::Won
+            } else if player.points > dealer_score {
+                // Player beat dealer
+                PlayerOutcome::Won
+            } else if player.points == dealer_score {
+                // Push (tie with dealer)
+                PlayerOutcome::Push
+            } else {
+                // Player lost to dealer
+                PlayerOutcome::Lost
+            };
+
+            player_results.insert(
+                email.clone(),
+                PlayerResult {
+                    points: player.points,
+                    cards_count: player.cards_history.len(),
+                    busted: player.busted,
+                    outcome,
+                },
+            );
+
+            // Track highest winning score for backward compatibility
             if !player.busted {
-                // Player didn't bust
                 if dealer_score == 0 {
                     // Dealer busted, all non-busted players win
                     if player.points == highest_score && highest_score > 0 {
@@ -728,11 +784,7 @@ impl Game {
                         winner = Some(email.clone());
                         tied_players.clear();
                     }
-                } else if player.points == dealer_score {
-                    // Push (tie with dealer) - not counted as win
-                    continue;
                 }
-                // else: player lost to dealer, skip
             }
         }
 
@@ -749,6 +801,9 @@ impl Game {
             tied_players,
             highest_score,
             all_players,
+            player_results,
+            dealer_points: self.dealer.points,
+            dealer_busted: self.dealer.busted,
         }
     }
 }

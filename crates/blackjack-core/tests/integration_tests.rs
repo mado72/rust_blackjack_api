@@ -1009,3 +1009,373 @@ fn test_dealer_handles_empty_deck() {
         "Should return DeckEmpty error"
     );
 }
+
+// ============================================================================
+// Game Results & Scoring Tests
+// ============================================================================
+
+#[test]
+fn test_result_player_beats_dealer() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    // Set up scenario: player1 has 20, dealer has 18
+    game.players.get_mut("player1@test.com").unwrap().points = 20;
+    game.dealer.points = 18;
+    game.dealer.busted = false;
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // Check winner fields (backward compatibility)
+    assert_eq!(results.winner, Some("player1@test.com".to_string()));
+    assert_eq!(results.highest_score, 20);
+    assert!(results.tied_players.is_empty());
+
+    // Check new detailed fields
+    assert_eq!(results.dealer_points, 18);
+    assert_eq!(results.dealer_busted, false);
+
+    let player1_result = results.player_results.get("player1@test.com").unwrap();
+    assert_eq!(player1_result.points, 20);
+    assert!(!player1_result.busted);
+    assert!(matches!(
+        player1_result.outcome,
+        blackjack_core::PlayerOutcome::Won
+    ));
+}
+
+#[test]
+fn test_result_dealer_beats_player() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    // Set up scenario: dealer has 20, player1 has 18
+    game.players.get_mut("player1@test.com").unwrap().points = 18;
+    game.dealer.points = 20;
+    game.dealer.busted = false;
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // Check winner fields
+    assert!(results.winner.is_none());
+    assert_eq!(results.highest_score, 0);
+    assert!(results.tied_players.is_empty());
+
+    // Check detailed fields
+    assert_eq!(results.dealer_points, 20);
+    assert_eq!(results.dealer_busted, false);
+
+    let player1_result = results.player_results.get("player1@test.com").unwrap();
+    assert_eq!(player1_result.points, 18);
+    assert!(!player1_result.busted);
+    assert!(matches!(
+        player1_result.outcome,
+        blackjack_core::PlayerOutcome::Lost
+    ));
+}
+
+#[test]
+fn test_result_push_tie_with_dealer() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    // Set up scenario: both have 19 (push)
+    game.players.get_mut("player1@test.com").unwrap().points = 19;
+    game.dealer.points = 19;
+    game.dealer.busted = false;
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // Check winner fields
+    assert!(results.winner.is_none());
+    assert_eq!(results.highest_score, 0);
+    assert!(results.tied_players.is_empty());
+
+    // Check detailed fields
+    let player1_result = results.player_results.get("player1@test.com").unwrap();
+    assert_eq!(player1_result.points, 19);
+    assert!(!player1_result.busted);
+    assert!(matches!(
+        player1_result.outcome,
+        blackjack_core::PlayerOutcome::Push
+    ));
+}
+
+#[test]
+fn test_result_player_busted() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    // Set up scenario: player1 busted
+    game.players.get_mut("player1@test.com").unwrap().points = 25;
+    game.players.get_mut("player1@test.com").unwrap().busted = true;
+    game.dealer.points = 18;
+    game.dealer.busted = false;
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // Check winner fields
+    assert!(results.winner.is_none());
+
+    // Check detailed fields
+    let player1_result = results.player_results.get("player1@test.com").unwrap();
+    assert_eq!(player1_result.points, 25);
+    assert!(player1_result.busted);
+    assert!(matches!(
+        player1_result.outcome,
+        blackjack_core::PlayerOutcome::Busted
+    ));
+}
+
+#[test]
+fn test_result_dealer_busted_players_win() {
+    let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
+
+    // Set up scenario: dealer busted, both players have different scores
+    game.players.get_mut("player1@test.com").unwrap().points = 18;
+    game.players.get_mut("player2@test.com").unwrap().points = 16;
+    game.dealer.points = 25;
+    game.dealer.busted = true;
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // Check winner fields - player1 has highest score
+    assert_eq!(results.winner, Some("player1@test.com".to_string()));
+    assert_eq!(results.highest_score, 18);
+    assert_eq!(results.dealer_busted, true);
+
+    // Check that all non-busted players won
+    let player1_result = results.player_results.get("player1@test.com").unwrap();
+    assert!(matches!(
+        player1_result.outcome,
+        blackjack_core::PlayerOutcome::Won
+    ));
+
+    let player2_result = results.player_results.get("player2@test.com").unwrap();
+    assert!(matches!(
+        player2_result.outcome,
+        blackjack_core::PlayerOutcome::Won
+    ));
+}
+
+#[test]
+fn test_result_mixed_outcomes() {
+    let mut game = test_game(vec!["player1@test.com", "player2@test.com", "player3@test.com"])
+        .unwrap();
+
+    // Set up scenario:
+    // - player1: 20 (wins)
+    // - player2: 18 (loses)
+    // - player3: 19 (push)
+    // - dealer: 19
+    game.players.get_mut("player1@test.com").unwrap().points = 20;
+    game.players.get_mut("player2@test.com").unwrap().points = 18;
+    game.players.get_mut("player3@test.com").unwrap().points = 19;
+    game.dealer.points = 19;
+    game.dealer.busted = false;
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // Check winner
+    assert_eq!(results.winner, Some("player1@test.com".to_string()));
+    assert_eq!(results.highest_score, 20);
+
+    // Check individual outcomes
+    let player1_result = results.player_results.get("player1@test.com").unwrap();
+    assert!(matches!(
+        player1_result.outcome,
+        blackjack_core::PlayerOutcome::Won
+    ));
+
+    let player2_result = results.player_results.get("player2@test.com").unwrap();
+    assert!(matches!(
+        player2_result.outcome,
+        blackjack_core::PlayerOutcome::Lost
+    ));
+
+    let player3_result = results.player_results.get("player3@test.com").unwrap();
+    assert!(matches!(
+        player3_result.outcome,
+        blackjack_core::PlayerOutcome::Push
+    ));
+}
+
+#[test]
+fn test_result_all_players_bust() {
+    let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
+
+    // All players busted
+    game.players.get_mut("player1@test.com").unwrap().points = 25;
+    game.players.get_mut("player1@test.com").unwrap().busted = true;
+    game.players.get_mut("player2@test.com").unwrap().points = 23;
+    game.players.get_mut("player2@test.com").unwrap().busted = true;
+    game.dealer.points = 18;
+    game.dealer.busted = false;
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // No winner
+    assert!(results.winner.is_none());
+    assert_eq!(results.highest_score, 0);
+
+    // Both players busted
+    let player1_result = results.player_results.get("player1@test.com").unwrap();
+    assert!(matches!(
+        player1_result.outcome,
+        blackjack_core::PlayerOutcome::Busted
+    ));
+
+    let player2_result = results.player_results.get("player2@test.com").unwrap();
+    assert!(matches!(
+        player2_result.outcome,
+        blackjack_core::PlayerOutcome::Busted
+    ));
+}
+
+#[test]
+fn test_result_tied_winners() {
+    let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
+
+    // Both players tie with same winning score
+    game.players.get_mut("player1@test.com").unwrap().points = 20;
+    game.players.get_mut("player2@test.com").unwrap().points = 20;
+    game.dealer.points = 18;
+    game.dealer.busted = false;
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // No single winner, but tied_players should have both
+    assert!(results.winner.is_none());
+    assert_eq!(results.tied_players.len(), 2);
+    assert!(results.tied_players.contains(&"player1@test.com".to_string()));
+    assert!(results.tied_players.contains(&"player2@test.com".to_string()));
+    assert_eq!(results.highest_score, 20);
+
+    // Both should show as Won
+    let player1_result = results.player_results.get("player1@test.com").unwrap();
+    assert!(matches!(
+        player1_result.outcome,
+        blackjack_core::PlayerOutcome::Won
+    ));
+
+    let player2_result = results.player_results.get("player2@test.com").unwrap();
+    assert!(matches!(
+        player2_result.outcome,
+        blackjack_core::PlayerOutcome::Won
+    ));
+}
+
+#[test]
+fn test_result_multiple_players_tie_and_lose() {
+    let mut game = test_game(vec!["player1@test.com", "player2@test.com"]).unwrap();
+
+    // Both players tie at 18, dealer has 20 (both lose)
+    game.players.get_mut("player1@test.com").unwrap().points = 18;
+    game.players.get_mut("player2@test.com").unwrap().points = 18;
+    game.dealer.points = 20;
+    game.dealer.busted = false;
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // No winner since both lost
+    assert!(results.winner.is_none());
+    assert_eq!(results.highest_score, 0);
+    assert!(results.tied_players.is_empty(), "tied_players should be empty when players tie but lose");
+
+    // Both should show as Lost
+    let player1_result = results.player_results.get("player1@test.com").unwrap();
+    assert_eq!(player1_result.points, 18);
+    assert!(matches!(
+        player1_result.outcome,
+        blackjack_core::PlayerOutcome::Lost
+    ));
+
+    let player2_result = results.player_results.get("player2@test.com").unwrap();
+    assert_eq!(player2_result.points, 18);
+    assert!(matches!(
+        player2_result.outcome,
+        blackjack_core::PlayerOutcome::Lost
+    ));
+}
+
+#[test]
+fn test_result_multiple_players_tie_and_push() {
+    let mut game = test_game(vec!["player1@test.com", "player2@test.com", "player3@test.com"])
+        .unwrap();
+
+    // All three players tie at 19, dealer also has 19 (all push)
+    game.players.get_mut("player1@test.com").unwrap().points = 19;
+    game.players.get_mut("player2@test.com").unwrap().points = 19;
+    game.players.get_mut("player3@test.com").unwrap().points = 19;
+    game.dealer.points = 19;
+    game.dealer.busted = false;
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // No winner since all pushed
+    assert!(results.winner.is_none());
+    assert_eq!(results.highest_score, 0);
+    assert!(results.tied_players.is_empty(), "tied_players should be empty when all push");
+
+    // All should show as Push
+    let player1_result = results.player_results.get("player1@test.com").unwrap();
+    assert_eq!(player1_result.points, 19);
+    assert!(matches!(
+        player1_result.outcome,
+        blackjack_core::PlayerOutcome::Push
+    ));
+
+    let player2_result = results.player_results.get("player2@test.com").unwrap();
+    assert_eq!(player2_result.points, 19);
+    assert!(matches!(
+        player2_result.outcome,
+        blackjack_core::PlayerOutcome::Push
+    ));
+
+    let player3_result = results.player_results.get("player3@test.com").unwrap();
+    assert_eq!(player3_result.points, 19);
+    assert!(matches!(
+        player3_result.outcome,
+        blackjack_core::PlayerOutcome::Push
+    ));
+}
+
+#[test]
+fn test_result_three_players_tie_and_win() {
+    let mut game = test_game(vec!["player1@test.com", "player2@test.com", "player3@test.com"])
+        .unwrap();
+
+    // All three players tie at 20, dealer has 18 (all win)
+    game.players.get_mut("player1@test.com").unwrap().points = 20;
+    game.players.get_mut("player2@test.com").unwrap().points = 20;
+    game.players.get_mut("player3@test.com").unwrap().points = 20;
+    game.dealer.points = 18;
+    game.dealer.busted = false;
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // No single winner, all three should be in tied_players
+    assert!(results.winner.is_none());
+    assert_eq!(results.tied_players.len(), 3);
+    assert!(results.tied_players.contains(&"player1@test.com".to_string()));
+    assert!(results.tied_players.contains(&"player2@test.com".to_string()));
+    assert!(results.tied_players.contains(&"player3@test.com".to_string()));
+    assert_eq!(results.highest_score, 20);
+
+    // All should show as Won
+    for email in ["player1@test.com", "player2@test.com", "player3@test.com"] {
+        let player_result = results.player_results.get(email).unwrap();
+        assert_eq!(player_result.points, 20);
+        assert!(matches!(
+            player_result.outcome,
+            blackjack_core::PlayerOutcome::Won
+        ));
+    }
+}
