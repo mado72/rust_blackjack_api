@@ -344,9 +344,13 @@ impl Game {
 
         // Check if game should auto-finish
         if self.check_auto_finish() {
+            tracing::info!(
+                "All players finished - triggering automatic dealer play"
+            );
             // All players finished, play dealer automatically
             self.play_dealer()?;
             self.finished = true;
+            tracing::info!("Game automatically finished after dealer play");
         }
 
         Ok(card)
@@ -531,9 +535,13 @@ impl Game {
 
         // Check if game should auto-finish
         if self.check_auto_finish() {
+            tracing::info!(
+                "All players finished after stand - triggering automatic dealer play"
+            );
             // All players finished, play dealer automatically
             self.play_dealer()?;
             self.finished = true;
+            tracing::info!("Game automatically finished after dealer play");
         }
 
         Ok(())
@@ -550,28 +558,72 @@ impl Game {
         })
     }
 
-    /// Plays the dealer's turn (draws until reaching 17 or higher)
-    /// Should be called after all players have finished
+    /// Plays the dealer's turn automatically
+    ///
+    /// The dealer follows standard blackjack rules:
+    /// - Draws cards until reaching 17 or higher
+    /// - Stops at 17-21 (soft 17 is treated as 17)
+    /// - Busts if exceeding 21
+    ///
+    /// This method is automatically called when all players have finished
+    /// their turns (either by standing or busting).
+    ///
+    /// # Returns
+    /// - `Ok(())` if dealer played successfully
+    /// - `Err(GameError::GameAlreadyFinished)` if game is already finished
+    /// - `Err(GameError::DeckEmpty)` if deck runs out of cards
+    ///
+    /// # Example Flow
+    /// ```text
+    /// Dealer starts with 0 points
+    /// Draws cards: 7, 8 (total: 15) - continues
+    /// Draws card: 5 (total: 20) - stops (>= 17)
+    /// Final state: Standing with 20 points
+    /// ```
     #[tracing::instrument(skip(self))]
     pub fn play_dealer(&mut self) -> Result<(), GameError> {
         if self.finished {
             return Err(GameError::GameAlreadyFinished);
         }
 
+        tracing::info!("Dealer starting turn with {} points", self.dealer.points);
+
         // Dealer draws until reaching 17 or busting
         while self.dealer.points < 17 && !self.dealer.busted {
             if self.available_cards.is_empty() {
+                tracing::warn!("Deck empty during dealer play");
                 return Err(GameError::DeckEmpty);
             }
 
             let random_index = rand::rng().random_range(0..self.available_cards.len());
             let card = self.available_cards.remove(random_index);
+
+            tracing::debug!(
+                "Dealer draws {} of {} (value: {})",
+                card.name,
+                card.suit,
+                card.value
+            );
+
             self.dealer.add_card(card);
+
+            tracing::debug!("Dealer now has {} points", self.dealer.points);
         }
 
         // Mark dealer as standing if not busted
         if !self.dealer.busted {
             self.dealer.state = PlayerState::Standing;
+            tracing::info!(
+                "Dealer stands with {} points (cards: {})",
+                self.dealer.points,
+                self.dealer.cards_history.len()
+            );
+        } else {
+            tracing::info!(
+                "Dealer busted with {} points (cards: {})",
+                self.dealer.points,
+                self.dealer.cards_history.len()
+            );
         }
 
         Ok(())

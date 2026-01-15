@@ -1,4 +1,4 @@
-use blackjack_core::{Game, GameError};
+use blackjack_core::{Game, GameError, PlayerState};
 use uuid::Uuid;
 
 // Helper function to create a test creator_id
@@ -748,4 +748,264 @@ fn test_busted_player_state_updates() {
     );
     assert!(player.busted, "Player should be marked as busted");
     assert!(player.points > 21, "Player points should be > 21");
+}
+
+// =====================================
+// DEALER LOGIC TESTS
+// =====================================
+
+#[test]
+fn test_dealer_plays_automatically_after_all_players_finish() {
+    use blackjack_core::PlayerState;
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    // Both players stand
+    game.stand("creator@test.com").unwrap();
+    game.stand("player1@test.com").unwrap();
+
+    // Game should be finished and dealer should have played
+    assert!(game.finished, "Game should be finished");
+    assert!(
+        game.dealer.state == PlayerState::Standing || game.dealer.state == PlayerState::Busted,
+        "Dealer should have played"
+    );
+}
+
+#[test]
+fn test_dealer_draws_until_17() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    // Manually trigger dealer play
+    game.play_dealer().unwrap();
+
+    // Dealer should have at least 17 points or be busted
+    assert!(
+        game.dealer.points >= 17 || game.dealer.busted,
+        "Dealer should draw until 17 or bust"
+    );
+}
+
+#[test]
+fn test_dealer_stops_at_17_or_higher() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    game.play_dealer().unwrap();
+
+    // If dealer didn't bust, they should have 17-21 points
+    if !game.dealer.busted {
+        assert!(
+            game.dealer.points >= 17 && game.dealer.points <= 21,
+            "Dealer should stop at 17-21"
+        );
+    }
+}
+
+#[test]
+fn test_dealer_can_bust() {
+    // Run multiple times to increase chance of dealer busting
+    let mut busted_at_least_once = false;
+
+    for _ in 0..50 {
+        let mut game = test_game(vec!["player1@test.com"]).unwrap();
+        game.play_dealer().unwrap();
+
+        if game.dealer.busted {
+            busted_at_least_once = true;
+            assert!(
+                game.dealer.points > 21,
+                "Busted dealer should have > 21 points"
+            );
+            assert_eq!(
+                game.dealer.state,
+                PlayerState::Busted,
+                "Dealer state should be Busted"
+            );
+            break;
+        }
+    }
+
+    // This is probabilistic but should happen in 50 tries
+    assert!(
+        busted_at_least_once,
+        "Dealer should bust at least once in 50 games"
+    );
+}
+
+#[test]
+fn test_dealer_marked_as_standing_when_not_busted() {
+    use blackjack_core::PlayerState;
+
+    // Run multiple times to get a non-busted dealer
+    for _ in 0..20 {
+        let mut game = test_game(vec!["player1@test.com"]).unwrap();
+        game.play_dealer().unwrap();
+
+        if !game.dealer.busted {
+            assert_eq!(
+                game.dealer.state,
+                PlayerState::Standing,
+                "Non-busted dealer should be Standing"
+            );
+            return; // Test passed
+        }
+    }
+}
+
+#[test]
+fn test_dealer_included_in_game_results() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    // Set some points for testing
+    game.players.get_mut("creator@test.com").unwrap().points = 18;
+    game.players.get_mut("player1@test.com").unwrap().points = 20;
+
+    game.play_dealer().unwrap();
+    game.finished = true;
+
+    let results = game.calculate_results();
+
+    // Dealer should be in all_players
+    assert!(
+        results.all_players.contains_key("dealer"),
+        "Results should include dealer"
+    );
+
+    let dealer_summary = results.all_players.get("dealer").unwrap();
+    assert_eq!(
+        dealer_summary.points, game.dealer.points,
+        "Dealer points should match"
+    );
+}
+
+#[test]
+fn test_players_win_when_dealer_busts() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    // Set player points
+    game.players.get_mut("creator@test.com").unwrap().points = 15;
+    game.players.get_mut("player1@test.com").unwrap().points = 18;
+
+    // Force dealer to bust by giving high-value cards
+    for _ in 0..3 {
+        if let Some(ten_card) = game
+            .available_cards
+            .iter()
+            .position(|c| c.value == 10)
+            .map(|idx| game.available_cards.remove(idx))
+        {
+            game.dealer.add_card(ten_card);
+        }
+    }
+
+    assert!(game.dealer.busted, "Dealer should be busted");
+
+    game.finished = true;
+    let results = game.calculate_results();
+
+    // Player with 18 points should win when dealer busts
+    assert!(
+        results.winner == Some("player1@test.com".to_string())
+            || results.tied_players.contains(&"player1@test.com".to_string()),
+        "Non-busted players should win when dealer busts"
+    );
+    assert_eq!(results.highest_score, 18, "Highest score should be 18");
+}
+
+#[test]
+fn test_dealer_wins_when_players_have_lower_scores() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    // Set player points lower than dealer
+    game.players.get_mut("creator@test.com").unwrap().points = 15;
+    game.players.get_mut("player1@test.com").unwrap().points = 16;
+
+    // Manually set dealer to 20
+    while game.dealer.points < 20 {
+        if let Some(card_idx) = game.available_cards.iter().position(|c| c.value > 0) {
+            let card = game.available_cards.remove(card_idx);
+            game.dealer.add_card(card);
+            if game.dealer.points >= 20 {
+                break;
+            }
+        }
+    }
+
+    // Ensure dealer didn't bust and has a good score
+    if !game.dealer.busted && game.dealer.points >= 17 && game.dealer.points <= 21 {
+        game.finished = true;
+        let results = game.calculate_results();
+
+        // No player should win if dealer has higher score
+        if game.dealer.points > 16 {
+            assert!(
+                results.winner.is_none() || results.highest_score <= game.dealer.points,
+                "Dealer should win with higher score"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_push_when_player_ties_dealer() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    // Set both to 19
+    game.players.get_mut("creator@test.com").unwrap().points = 19;
+
+    // Manually set dealer to 19
+    while game.dealer.points < 19 {
+        if let Some(card_idx) = game.available_cards.iter().position(|c| c.value > 0) {
+            let card = game.available_cards.remove(card_idx);
+            game.dealer.add_card(card);
+            if game.dealer.points >= 19 {
+                break;
+            }
+        }
+    }
+
+    // Set other player to bust
+    game.players.get_mut("player1@test.com").unwrap().points = 25;
+    game.players.get_mut("player1@test.com").unwrap().busted = true;
+
+    if game.dealer.points == 19 && !game.dealer.busted {
+        game.finished = true;
+        let results = game.calculate_results();
+
+        // Creator tied with dealer (push), should not be counted as winner
+        assert!(
+            results.winner.is_none(),
+            "Push should not result in a winner"
+        );
+        assert_eq!(results.highest_score, 0, "No wins when only pushes exist");
+    }
+}
+
+#[test]
+fn test_dealer_cannot_play_after_game_finished() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    game.play_dealer().unwrap();
+    game.finished = true;
+
+    let result = game.play_dealer();
+    assert_eq!(
+        result,
+        Err(GameError::GameAlreadyFinished),
+        "Cannot play dealer after game finished"
+    );
+}
+
+#[test]
+fn test_dealer_handles_empty_deck() {
+    let mut game = test_game(vec!["player1@test.com"]).unwrap();
+
+    // Empty the deck
+    game.available_cards.clear();
+
+    let result = game.play_dealer();
+    assert_eq!(
+        result,
+        Err(GameError::DeckEmpty),
+        "Should return DeckEmpty error"
+    );
 }
