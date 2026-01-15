@@ -51,6 +51,8 @@ pub enum GameError {
     EnrollmentNotClosed,
     #[error("Player already enrolled")]
     PlayerAlreadyEnrolled,
+    #[error("Game not active")]
+    GameNotActive,
     #[error("Core game error: {0}")]
     CoreError(#[from] CoreGameError),
 }
