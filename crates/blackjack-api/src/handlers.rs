@@ -505,6 +505,15 @@ pub struct CreateGameResponse {
 
     /// Number of players in the game (includes creator)
     pub player_count: u32,
+
+    /// Enrollment timeout in seconds
+    pub enrollment_timeout_seconds: u64,
+
+    /// RFC3339 timestamp when enrollment closes
+    pub enrollment_closes_at: String,
+
+    /// Time remaining for enrollment in seconds
+    pub time_remaining_seconds: i64,
 }
 
 /// Creates a new game in enrollment mode
@@ -616,6 +625,21 @@ pub async fn create_game(
         .game_service
         .create_game(creator_id, enrollment_timeout)?;
 
+    // Get game to retrieve enrollment info
+    let games = state.game_service.games.lock().unwrap();
+    let game = games.get(&game_id).ok_or_else(|| {
+        ApiError::new(
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            "GAME_NOT_FOUND",
+            "Game was created but could not be retrieved",
+        )
+    })?;
+
+    let enrollment_closes_at = game.get_enrollment_expires_at();
+    let time_remaining = game.get_enrollment_time_remaining();
+    let timeout_seconds = game.enrollment_timeout_seconds;
+    drop(games); // Release lock
+
     tracing::info!(
         game_id = %game_id,
         creator_id = %creator_id,
@@ -629,6 +653,9 @@ pub async fn create_game(
         creator_id,
         message: "Game created successfully. You are automatically enrolled.".to_string(),
         player_count: 1,
+        enrollment_timeout_seconds: timeout_seconds,
+        enrollment_closes_at,
+        time_remaining_seconds: time_remaining,
     }))
 }
 

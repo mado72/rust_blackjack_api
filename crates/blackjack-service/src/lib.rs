@@ -162,6 +162,10 @@ pub struct GameStateResponse {
     pub finished: bool,
     pub current_turn_player: Option<String>,
     pub turn_order: Vec<String>,
+    pub enrollment_timeout_seconds: u64,
+    pub enrollment_closes_at: String,
+    pub time_remaining_seconds: i64,
+    pub enrollment_closed: bool,
 }
 
 /// Information about a game in enrollment phase
@@ -422,7 +426,7 @@ impl InvitationService {
 
 /// Main game service managing multiple games
 pub struct GameService {
-    games: Arc<Mutex<HashMap<Uuid, Game>>>,
+    pub games: Arc<Mutex<HashMap<Uuid, Game>>>,
     user_service: Arc<UserService>,
     config: ServiceConfig,
 }
@@ -646,6 +650,10 @@ impl GameService {
             finished: game.finished,
             current_turn_player: game.get_current_player().map(|s| s.to_string()),
             turn_order: game.turn_order.clone(),
+            enrollment_timeout_seconds: game.enrollment_timeout_seconds,
+            enrollment_closes_at: game.get_enrollment_expires_at(),
+            time_remaining_seconds: game.get_enrollment_time_remaining(),
+            enrollment_closed: game.enrollment_closed,
         })
     }
 
@@ -683,6 +691,10 @@ impl GameService {
             finished: game.finished,
             current_turn_player: game.get_current_player().map(|s| s.to_string()),
             turn_order: game.turn_order.clone(),
+            enrollment_timeout_seconds: game.enrollment_timeout_seconds,
+            enrollment_closes_at: game.get_enrollment_expires_at(),
+            time_remaining_seconds: game.get_enrollment_time_remaining(),
+            enrollment_closed: game.enrollment_closed,
         })
     }
 
