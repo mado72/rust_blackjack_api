@@ -8,13 +8,15 @@ This project provides a complete backend system for managing multi-player Blackj
 
 - **RESTful API**: Versioned endpoints under `/api/v1` with OpenAPI-style documentation
 - **JWT Authentication**: Secure player authentication per game session
-- **User Management**: User registration, login, and persistent accounts (M7)
-- **Turn-Based Gameplay**: Ordered turns, automatic advancement, smart turn skipping (M7)
-- **Game Invitations**: Invite system with configurable timeouts and status tracking (M7)
+- **Security Hardening (M8)**: Argon2id password hashing, RBAC, security headers
+- **User Management**: User registration, login, persistent accounts, password changes
+- **Access Control (M8)**: Role-based permissions (Creator, Player, Spectator)
+- **Turn-Based Gameplay**: Ordered turns, automatic advancement, smart turn skipping
+- **Game Invitations**: Invite system with configurable timeouts and status tracking
 - **Rate Limiting**: Per-user request throttling using sliding window algorithm
 - **Real-time Ready**: WebSocket blueprint for future real-time notifications
 - **Observability**: Structured logging with tracing, health checks, and metrics-ready architecture
-- **Production-Grade**: External configuration, CORS support, graceful error handling
+- **Production-Grade**: External configuration, CORS support, graceful error handling, security headers
 - **Multi-player Support**: 1-10 players per game with independent state management
 - **Flexible Gameplay**: Dynamic Ace values (1 or 11), ordered card history, bust detection
 
