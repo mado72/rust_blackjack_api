@@ -115,7 +115,7 @@ fn test_draw_card() {
     service.enroll_player(game_id, player1_id).unwrap();
     service.close_enrollment(game_id, creator_id).unwrap();
 
-    let result = service.draw_card(game_id, &test_creator_email());
+    let result = service.draw_card(game_id, creator_id);
 
     assert!(result.is_ok());
     let response = result.unwrap();
@@ -127,8 +127,9 @@ fn test_draw_card() {
 fn test_draw_card_game_not_found() {
     let (service, _user_service) = create_game_service(ServiceConfig::default());
     let fake_game_id = uuid::Uuid::new_v4();
+    let fake_user_id = uuid::Uuid::new_v4();
 
-    let result = service.draw_card(fake_game_id, "player@test.com");
+    let result = service.draw_card(fake_game_id, fake_user_id);
     assert!(result.is_err());
 }
 
@@ -147,7 +148,7 @@ fn test_set_ace_value() {
 
     let mut ace_card_id = None;
     for _ in 0..52 {
-        if let Ok(response) = service.draw_card(game_id, &test_creator_email()) {
+        if let Ok(response) = service.draw_card(game_id, creator_id) {
             if response.card.name == "A" {
                 ace_card_id = Some(response.card.id);
                 break;
@@ -156,10 +157,10 @@ fn test_set_ace_value() {
     }
 
     if let Some(card_id) = ace_card_id {
-        let result = service.set_ace_value(game_id, &test_creator_email(), card_id, true);
+        let result = service.set_ace_value(game_id, creator_id, card_id, true);
         assert!(result.is_ok());
 
-        let result = service.set_ace_value(game_id, &test_creator_email(), card_id, false);
+        let result = service.set_ace_value(game_id, creator_id, card_id, false);
         assert!(result.is_ok());
     }
 }
@@ -201,8 +202,8 @@ fn test_finish_game() {
     service.enroll_player(game_id, player1_id).unwrap();
     service.enroll_player(game_id, player2_id).unwrap();
 
-    let _ = service.draw_card(game_id, &test_creator_email());
-    let _ = service.draw_card(game_id, "player1@test.com");
+    let _ = service.draw_card(game_id, creator_id);
+    let _ = service.draw_card(game_id, player1_id);
 
     let result = service.finish_game(game_id);
     assert!(result.is_ok());
@@ -235,15 +236,15 @@ fn test_concurrent_access() {
 
     for i in 0..5 {
         let service_clone = Arc::clone(&service);
-        let player = if i % 3 == 0 {
-            test_creator_email()
+        let player_id = if i % 3 == 0 {
+            creator_id
         } else if i % 3 == 1 {
-            "player1@test.com".to_string()
+            player1_id
         } else {
-            "player2@test.com".to_string()
+            player2_id
         };
 
-        let handle = thread::spawn(move || service_clone.draw_card(game_id, &player));
+        let handle = thread::spawn(move || service_clone.draw_card(game_id, player_id));
 
         handles.push(handle);
     }
@@ -282,14 +283,21 @@ fn test_draw_until_deck_empty() {
             break;
         }
 
-        // Try to draw for current player
-        let current_player = if let Some(cp) = state.current_turn_player {
+        // Try to draw for current player - need to get user_id from email
+        let current_player_email = if let Some(cp) = state.current_turn_player {
             cp
         } else {
             break;
         };
 
-        let result = service.draw_card(game_id, &current_player);
+        // Get user_id from email
+        let current_user_id = if current_player_email == test_creator_email() {
+            creator_id
+        } else {
+            player1_id
+        };
+
+        let result = service.draw_card(game_id, current_user_id);
         if result.is_err() {
             // Player busted or game finished
             break;

@@ -586,17 +586,21 @@ impl GameService {
     }
 
     /// Draws a card for a player in a game
-    #[tracing::instrument(skip(self), fields(game_id, player_email))]
-    pub fn draw_card(&self, game_id: Uuid, email: &str) -> Result<DrawCardResponse, GameError> {
+    #[tracing::instrument(skip(self), fields(game_id, user_id))]
+    pub fn draw_card(&self, game_id: Uuid, user_id: Uuid) -> Result<DrawCardResponse, GameError> {
+        // Get user email from user service
+        let user = self.user_service.get_user(user_id)?;
+        let email = user.email;
+
         let mut games = self.games.lock().unwrap();
         let game = games.get_mut(&game_id).ok_or(GameError::GameNotFound)?;
 
-        let card = game.draw_card(email)?;
-        let player = game.players.get(email).ok_or(GameError::PlayerNotInGame)?;
+        let card = game.draw_card(&email)?;
+        let player = game.players.get(&email).ok_or(GameError::PlayerNotInGame)?;
 
         tracing::debug!(
             game_id = %game_id,
-            player_email = email,
+            player_email = %email,
             card = ?card,
             "Card drawn"
         );
@@ -615,15 +619,19 @@ impl GameService {
     pub fn set_ace_value(
         &self,
         game_id: Uuid,
-        email: &str,
+        user_id: Uuid,
         card_id: Uuid,
         as_eleven: bool,
     ) -> Result<PlayerStateResponse, GameError> {
+        // Get user email from user service
+        let user = self.user_service.get_user(user_id)?;
+        let email = user.email;
+
         let mut games = self.games.lock().unwrap();
         let game = games.get_mut(&game_id).ok_or(GameError::GameNotFound)?;
 
-        game.set_ace_value(email, card_id, as_eleven)?;
-        let player = game.players.get(email).ok_or(GameError::PlayerNotInGame)?;
+        game.set_ace_value(&email, card_id, as_eleven)?;
+        let player = game.players.get(&email).ok_or(GameError::PlayerNotInGame)?;
 
         Ok(PlayerStateResponse {
             points: player.points,
@@ -663,12 +671,16 @@ impl GameService {
     }
 
     /// Player stands (stops playing)
-    #[tracing::instrument(skip(self), fields(game_id, player_email))]
-    pub fn stand(&self, game_id: Uuid, email: &str) -> Result<GameStateResponse, GameError> {
+    #[tracing::instrument(skip(self), fields(game_id, user_id))]
+    pub fn stand(&self, game_id: Uuid, user_id: Uuid) -> Result<GameStateResponse, GameError> {
+        // Get user email from user service
+        let user = self.user_service.get_user(user_id)?;
+        let email = user.email;
+
         let mut games = self.games.lock().unwrap();
         let game = games.get_mut(&game_id).ok_or(GameError::GameNotFound)?;
 
-        game.stand(email)?;
+        game.stand(&email)?;
 
         tracing::info!(
             game_id = %game_id,
@@ -704,8 +716,12 @@ impl GameService {
     }
 
     /// Adds a player to a game (from invitation acceptance)
-    #[tracing::instrument(skip(self), fields(game_id, player_email))]
-    pub fn add_player_to_game(&self, game_id: Uuid, email: String) -> Result<(), GameError> {
+    #[tracing::instrument(skip(self), fields(game_id, user_id))]
+    pub fn add_player_to_game(&self, game_id: Uuid, user_id: Uuid) -> Result<(), GameError> {
+        // Get user email from user service
+        let user = self.user_service.get_user(user_id)?;
+        let email = user.email;
+
         let mut games = self.games.lock().unwrap();
         let game = games.get_mut(&game_id).ok_or(GameError::GameNotFound)?;
 
@@ -713,6 +729,7 @@ impl GameService {
 
         tracing::info!(
             game_id = %game_id,
+            user_id = %user_id,
             player_email = %email,
             "Player added to game"
         );

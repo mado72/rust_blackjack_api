@@ -847,7 +847,16 @@ pub async fn draw_card(
         ));
     }
 
-    let response = state.game_service.draw_card(game_id, &claims.email)?;
+    // Parse user_id from JWT claims
+    let user_id = Uuid::parse_str(&claims.user_id).map_err(|_| {
+        ApiError::new(
+            StatusCode::BAD_REQUEST,
+            "INVALID_USER_ID",
+            "Invalid user ID format in token",
+        )
+    })?;
+
+    let response = state.game_service.draw_card(game_id, user_id)?;
 
     Ok(Json(response))
 }
@@ -924,9 +933,18 @@ pub async fn set_ace_value(
     Path(game_id): Path<Uuid>,
     Json(payload): Json<SetAceValueRequest>,
 ) -> Result<Json<PlayerStateResponse>, ApiError> {
+    // Parse user_id from JWT claims
+    let user_id = Uuid::parse_str(&claims.user_id).map_err(|_| {
+        ApiError::new(
+            StatusCode::BAD_REQUEST,
+            "INVALID_USER_ID",
+            "Invalid user ID format in token",
+        )
+    })?;
+
     let response = state.game_service.set_ace_value(
         game_id,
-        &claims.email,
+        user_id,
         payload.card_id,
         payload.as_eleven,
     )?;
@@ -1369,10 +1387,19 @@ pub async fn accept_invitation(
         ));
     }
 
+    // Parse user_id from JWT claims
+    let user_id = Uuid::parse_str(&claims.user_id).map_err(|_| {
+        ApiError::new(
+            StatusCode::BAD_REQUEST,
+            "INVALID_USER_ID",
+            "Invalid user ID format in token",
+        )
+    })?;
+
     // Add player to game
     state
         .game_service
-        .add_player_to_game(invitation.game_id, claims.email.clone())?;
+        .add_player_to_game(invitation.game_id, user_id)?;
 
     // Mark invitation as accepted
     state.invitation_service.accept(invitation_id)?;
@@ -1487,7 +1514,16 @@ pub async fn stand(
         ));
     }
 
-    let game_state = state.game_service.stand(game_id, &claims.email)?;
+    // Parse user_id from JWT claims
+    let user_id = Uuid::parse_str(&claims.user_id).map_err(|_| {
+        ApiError::new(
+            StatusCode::BAD_REQUEST,
+            "INVALID_USER_ID",
+            "Invalid user ID format in token",
+        )
+    })?;
+
+    let game_state = state.game_service.stand(game_id, user_id)?;
 
     // Get player info from response
     let player_info = game_state.players.get(&claims.email).ok_or_else(|| {
