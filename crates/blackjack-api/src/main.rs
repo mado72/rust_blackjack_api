@@ -148,7 +148,10 @@ async fn main() {
         .route("/api/v1/games/:game_id/finish", post(finish_game))
         .route("/api/v1/games/:game_id/results", get(get_game_results))
         // M8: Game management endpoints
-        .route("/api/v1/games/:game_id/players/:player_id", delete(kick_player))
+        .route(
+            "/api/v1/games/:game_id/players/:player_id",
+            delete(kick_player),
+        )
         .route("/api/v1/games/:game_id/participants", get(get_participants))
         // M7: Invitation endpoints
         .route(

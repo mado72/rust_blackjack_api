@@ -428,8 +428,8 @@ impl GameRole {
     /// ```
     pub fn has_permission(&self, _permission: GamePermission) -> bool {
         match self {
-            GameRole::Creator => true, // Creator has all permissions
-            GameRole::Player => false, // Players only perform their own actions
+            GameRole::Creator => true,    // Creator has all permissions
+            GameRole::Player => false,    // Players only perform their own actions
             GameRole::Spectator => false, // Spectators are read-only
         }
     }
@@ -592,9 +592,7 @@ impl Game {
 
         // Check if game should auto-finish
         if self.check_auto_finish() {
-            tracing::info!(
-                "All players finished - triggering automatic dealer play"
-            );
+            tracing::info!("All players finished - triggering automatic dealer play");
             // All players finished, play dealer automatically
             self.play_dealer()?;
             self.finished = true;
@@ -881,9 +879,7 @@ impl Game {
 
         // Check if game should auto-finish
         if self.check_auto_finish() {
-            tracing::info!(
-                "All players finished after stand - triggering automatic dealer play"
-            );
+            tracing::info!("All players finished after stand - triggering automatic dealer play");
             // All players finished, play dealer automatically
             self.play_dealer()?;
             self.finished = true;

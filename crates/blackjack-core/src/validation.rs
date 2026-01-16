@@ -1,7 +1,6 @@
 /// Email and password validation module
 ///
 /// Provides validation functions for user input according to security best practices.
-
 use regex::Regex;
 use std::sync::OnceLock;
 
@@ -12,9 +11,8 @@ pub const MIN_PASSWORD_LENGTH: usize = 8;
 static EMAIL_REGEX: OnceLock<Regex> = OnceLock::new();
 
 fn get_email_regex() -> &'static Regex {
-    EMAIL_REGEX.get_or_init(|| {
-        Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap()
-    })
+    EMAIL_REGEX
+        .get_or_init(|| Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap())
 }
 
 /// Validation errors

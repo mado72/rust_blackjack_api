@@ -344,11 +344,9 @@ impl From<blackjack_service::GameError> for ApiError {
                 "GAME_NOT_ACTIVE",
                 "Game is not active or has been deleted",
             ),
-            GameError::WeakPassword(msg) => Self::new(
-                StatusCode::BAD_REQUEST,
-                "WEAK_PASSWORD",
-                msg,
-            ),
+            GameError::WeakPassword(msg) => {
+                Self::new(StatusCode::BAD_REQUEST, "WEAK_PASSWORD", msg)
+            }
             GameError::AccountInactive => Self::new(
                 StatusCode::FORBIDDEN,
                 "ACCOUNT_INACTIVE",
@@ -364,11 +362,9 @@ impl From<blackjack_service::GameError> for ApiError {
                 "ACCOUNT_LOCKED",
                 "Account is locked due to too many failed login attempts",
             ),
-            GameError::ValidationError(msg) => Self::new(
-                StatusCode::BAD_REQUEST,
-                "VALIDATION_ERROR",
-                msg,
-            ),
+            GameError::ValidationError(msg) => {
+                Self::new(StatusCode::BAD_REQUEST, "VALIDATION_ERROR", msg)
+            }
             GameError::PasswordHashError(_) => Self::new(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "PASSWORD_HASH_ERROR",

@@ -725,8 +725,7 @@ fn test_busted_player_state_updates() {
     let ten_card_2 = game
         .available_cards
         .iter()
-        .filter(|c| c.value == 10 && c.id != ten_card_1.id)
-        .next()
+        .find(|c| c.value == 10 && c.id != ten_card_1.id)
         .cloned()
         .expect("Should have another 10-value card");
 
@@ -905,7 +904,9 @@ fn test_players_win_when_dealer_busts() {
     // Player with 18 points should win when dealer busts
     assert!(
         results.winner == Some("player1@test.com".to_string())
-            || results.tied_players.contains(&"player1@test.com".to_string()),
+            || results
+                .tied_players
+                .contains(&"player1@test.com".to_string()),
         "Non-busted players should win when dealer busts"
     );
     assert_eq!(results.highest_score, 18, "Highest score should be 18");
@@ -1033,7 +1034,7 @@ fn test_result_player_beats_dealer() {
 
     // Check new detailed fields
     assert_eq!(results.dealer_points, 18);
-    assert_eq!(results.dealer_busted, false);
+    assert!(!results.dealer_busted);
 
     let player1_result = results.player_results.get("player1@test.com").unwrap();
     assert_eq!(player1_result.points, 20);
@@ -1063,7 +1064,7 @@ fn test_result_dealer_beats_player() {
 
     // Check detailed fields
     assert_eq!(results.dealer_points, 20);
-    assert_eq!(results.dealer_busted, false);
+    assert!(!results.dealer_busted);
 
     let player1_result = results.player_results.get("player1@test.com").unwrap();
     assert_eq!(player1_result.points, 18);
@@ -1143,7 +1144,7 @@ fn test_result_dealer_busted_players_win() {
     // Check winner fields - player1 has highest score
     assert_eq!(results.winner, Some("player1@test.com".to_string()));
     assert_eq!(results.highest_score, 18);
-    assert_eq!(results.dealer_busted, true);
+    assert!(results.dealer_busted);
 
     // Check that all non-busted players won
     let player1_result = results.player_results.get("player1@test.com").unwrap();
@@ -1161,8 +1162,12 @@ fn test_result_dealer_busted_players_win() {
 
 #[test]
 fn test_result_mixed_outcomes() {
-    let mut game = test_game(vec!["player1@test.com", "player2@test.com", "player3@test.com"])
-        .unwrap();
+    let mut game = test_game(vec![
+        "player1@test.com",
+        "player2@test.com",
+        "player3@test.com",
+    ])
+    .unwrap();
 
     // Set up scenario:
     // - player1: 20 (wins)
@@ -1251,8 +1256,16 @@ fn test_result_tied_winners() {
     // No single winner, but tied_players should have both
     assert!(results.winner.is_none());
     assert_eq!(results.tied_players.len(), 2);
-    assert!(results.tied_players.contains(&"player1@test.com".to_string()));
-    assert!(results.tied_players.contains(&"player2@test.com".to_string()));
+    assert!(
+        results
+            .tied_players
+            .contains(&"player1@test.com".to_string())
+    );
+    assert!(
+        results
+            .tied_players
+            .contains(&"player2@test.com".to_string())
+    );
     assert_eq!(results.highest_score, 20);
 
     // Both should show as Won
@@ -1285,7 +1298,10 @@ fn test_result_multiple_players_tie_and_lose() {
     // No winner since both lost
     assert!(results.winner.is_none());
     assert_eq!(results.highest_score, 0);
-    assert!(results.tied_players.is_empty(), "tied_players should be empty when players tie but lose");
+    assert!(
+        results.tied_players.is_empty(),
+        "tied_players should be empty when players tie but lose"
+    );
 
     // Both should show as Lost
     let player1_result = results.player_results.get("player1@test.com").unwrap();
@@ -1305,8 +1321,12 @@ fn test_result_multiple_players_tie_and_lose() {
 
 #[test]
 fn test_result_multiple_players_tie_and_push() {
-    let mut game = test_game(vec!["player1@test.com", "player2@test.com", "player3@test.com"])
-        .unwrap();
+    let mut game = test_game(vec![
+        "player1@test.com",
+        "player2@test.com",
+        "player3@test.com",
+    ])
+    .unwrap();
 
     // All three players tie at 19, dealer also has 19 (all push)
     game.players.get_mut("player1@test.com").unwrap().points = 19;
@@ -1321,7 +1341,10 @@ fn test_result_multiple_players_tie_and_push() {
     // No winner since all pushed
     assert!(results.winner.is_none());
     assert_eq!(results.highest_score, 0);
-    assert!(results.tied_players.is_empty(), "tied_players should be empty when all push");
+    assert!(
+        results.tied_players.is_empty(),
+        "tied_players should be empty when all push"
+    );
 
     // All should show as Push
     let player1_result = results.player_results.get("player1@test.com").unwrap();
@@ -1348,8 +1371,12 @@ fn test_result_multiple_players_tie_and_push() {
 
 #[test]
 fn test_result_three_players_tie_and_win() {
-    let mut game = test_game(vec!["player1@test.com", "player2@test.com", "player3@test.com"])
-        .unwrap();
+    let mut game = test_game(vec![
+        "player1@test.com",
+        "player2@test.com",
+        "player3@test.com",
+    ])
+    .unwrap();
 
     // All three players tie at 20, dealer has 18 (all win)
     game.players.get_mut("player1@test.com").unwrap().points = 20;
@@ -1364,9 +1391,21 @@ fn test_result_three_players_tie_and_win() {
     // No single winner, all three should be in tied_players
     assert!(results.winner.is_none());
     assert_eq!(results.tied_players.len(), 3);
-    assert!(results.tied_players.contains(&"player1@test.com".to_string()));
-    assert!(results.tied_players.contains(&"player2@test.com".to_string()));
-    assert!(results.tied_players.contains(&"player3@test.com".to_string()));
+    assert!(
+        results
+            .tied_players
+            .contains(&"player1@test.com".to_string())
+    );
+    assert!(
+        results
+            .tied_players
+            .contains(&"player2@test.com".to_string())
+    );
+    assert!(
+        results
+            .tied_players
+            .contains(&"player3@test.com".to_string())
+    );
     assert_eq!(results.highest_score, 20);
 
     // All should show as Won

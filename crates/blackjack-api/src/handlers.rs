@@ -297,18 +297,17 @@ pub async fn change_password(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user_id = Uuid::parse_str(&claims.user_id)
-        .map_err(|_| ApiError::new(
+    let user_id = Uuid::parse_str(&claims.user_id).map_err(|_| {
+        ApiError::new(
             StatusCode::BAD_REQUEST,
             "INVALID_USER_ID",
-            "Invalid user ID format"
-        ))?;
+            "Invalid user ID format",
+        )
+    })?;
 
-    state.user_service.change_password(
-        user_id,
-        &payload.old_password,
-        &payload.new_password,
-    )?;
+    state
+        .user_service
+        .change_password(user_id, &payload.old_password, &payload.new_password)?;
 
     tracing::info!(
         user_id = %user_id,
@@ -907,7 +906,7 @@ pub async fn draw_card(
 ) -> Result<Json<DrawCardResponse>, ApiError> {
     // Validate it's the player's turn
     let game_state = state.game_service.get_game_state(game_id)?;
-    
+
     // Check if game is already finished
     if game_state.finished {
         return Err(ApiError::new(
@@ -916,7 +915,7 @@ pub async fn draw_card(
             "Game has already finished",
         ));
     }
-    
+
     if let Some(current_player) = game_state.current_turn_player
         && current_player != claims.email
     {
@@ -1022,12 +1021,10 @@ pub async fn set_ace_value(
         )
     })?;
 
-    let response = state.game_service.set_ace_value(
-        game_id,
-        user_id,
-        payload.card_id,
-        payload.as_eleven,
-    )?;
+    let response =
+        state
+            .game_service
+            .set_ace_value(game_id, user_id, payload.card_id, payload.as_eleven)?;
 
     Ok(Json(response))
 }
@@ -1091,12 +1088,13 @@ pub async fn finish_game(
     Extension(claims): Extension<Claims>,
     Path(game_id): Path<Uuid>,
 ) -> Result<Json<GameResult>, ApiError> {
-    let user_id = Uuid::parse_str(&claims.user_id)
-        .map_err(|_| ApiError::new(
+    let user_id = Uuid::parse_str(&claims.user_id).map_err(|_| {
+        ApiError::new(
             StatusCode::BAD_REQUEST,
             "INVALID_USER_ID",
-            "Invalid user ID format"
-        ))?;
+            "Invalid user ID format",
+        )
+    })?;
     let result = state.game_service.finish_game(game_id, user_id)?;
 
     Ok(Json(result))
@@ -2041,14 +2039,17 @@ pub async fn kick_player(
     Extension(claims): Extension<Claims>,
     Path((game_id, player_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<KickPlayerResponse>, ApiError> {
-    let kicker_id = Uuid::parse_str(&claims.user_id)
-        .map_err(|_| ApiError::new(
+    let kicker_id = Uuid::parse_str(&claims.user_id).map_err(|_| {
+        ApiError::new(
             StatusCode::BAD_REQUEST,
             "INVALID_USER_ID",
-            "Invalid user ID format"
-        ))?;
+            "Invalid user ID format",
+        )
+    })?;
 
-    let player_email = state.game_service.kick_player(game_id, kicker_id, player_id)?;
+    let player_email = state
+        .game_service
+        .kick_player(game_id, kicker_id, player_id)?;
 
     tracing::info!(
         game_id = %game_id,
@@ -2134,8 +2135,7 @@ pub async fn get_participants(
 ) -> Result<Json<GetParticipantsResponse>, ApiError> {
     // Get game to access participants
     let games = state.game_service.games.lock().unwrap();
-    let game = games.get(&game_id)
-        .ok_or_else(|| ApiError::game_not_found())?;
+    let game = games.get(&game_id).ok_or_else(ApiError::game_not_found)?;
 
     // Convert participants to response format
     let participants: Vec<ParticipantInfo> = game

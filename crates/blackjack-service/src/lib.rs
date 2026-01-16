@@ -1,6 +1,6 @@
 use blackjack_core::{
-    password, validation, Card, Game, GameError as CoreGameError, GameInvitation, GameResult,
-    InvitationStatus, User,
+    Card, Game, GameError as CoreGameError, GameInvitation, GameResult, InvitationStatus, User,
+    password, validation,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -242,7 +242,8 @@ impl UserService {
     #[tracing::instrument(skip(self, password))]
     pub fn register(&self, email: String, password: String) -> Result<Uuid, GameError> {
         // Validate email format
-        validation::validate_email(&email).map_err(|e| GameError::ValidationError(e.to_string()))?;
+        validation::validate_email(&email)
+            .map_err(|e| GameError::ValidationError(e.to_string()))?;
 
         // Validate password complexity
         validation::validate_password(&password)
@@ -294,12 +295,10 @@ impl UserService {
     #[tracing::instrument(skip(self, password))]
     pub fn login(&self, email: &str, password: &str) -> Result<User, GameError> {
         let email_index = self.email_index.lock().unwrap();
-        let user_id = email_index
-            .get(email)
-            .ok_or_else(|| {
-                tracing::warn!(email = %email, "Login failed: user not found");
-                GameError::InvalidCredentials
-            })?;
+        let user_id = email_index.get(email).ok_or_else(|| {
+            tracing::warn!(email = %email, "Login failed: user not found");
+            GameError::InvalidCredentials
+        })?;
 
         let mut users = self.users.lock().unwrap();
         let user = users.get_mut(user_id).ok_or(GameError::UserNotFound)?;
@@ -311,8 +310,8 @@ impl UserService {
         }
 
         // Verify password using constant-time comparison
-        let password_valid = password::verify_password(password, &user.password_hash)
-            .map_err(|e| {
+        let password_valid =
+            password::verify_password(password, &user.password_hash).map_err(|e| {
                 tracing::error!(user_id = %user_id, "Password verification error: {}", e);
                 GameError::PasswordHashError(e.to_string())
             })?;
@@ -775,12 +774,11 @@ impl GameService {
         let player_email = user.email.clone();
 
         // Add player - explicitly map core errors to service errors
-        game.add_player(player_email.clone())
-            .map_err(|e| match e {
-                CoreGameError::GameNotActive => GameError::GameNotActive,
-                CoreGameError::PlayerAlreadyEnrolled => GameError::PlayerAlreadyEnrolled,
-                other => GameError::CoreError(other),
-            })?;
+        game.add_player(player_email.clone()).map_err(|e| match e {
+            CoreGameError::GameNotActive => GameError::GameNotActive,
+            CoreGameError::PlayerAlreadyEnrolled => GameError::PlayerAlreadyEnrolled,
+            other => GameError::CoreError(other),
+        })?;
 
         // Add to participants with Player role (M8: RBAC)
         game.add_participant(user_id, player_email.clone());
@@ -858,7 +856,7 @@ impl GameService {
             CoreGameError::PlayerNotInGame => GameError::PlayerNotInGame,
             other => GameError::CoreError(other),
         })?;
-        
+
         let player = game.players.get(&email).ok_or(GameError::PlayerNotInGame)?;
 
         tracing::debug!(
@@ -1055,7 +1053,9 @@ impl GameService {
                 player_id = %player_id,
                 "Cannot kick game creator"
             );
-            return Err(GameError::CoreError(blackjack_core::GameError::CannotKickCreator));
+            return Err(GameError::CoreError(
+                blackjack_core::GameError::CannotKickCreator,
+            ));
         }
 
         // Can only kick during enrollment

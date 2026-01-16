@@ -640,7 +640,7 @@ fn test_jwt_expiration_validation_is_in_middleware() {
     // This is tested in the middleware layer, not in handler tests
 
     // This test serves as documentation only
-    assert!(true, "JWT expiration is validated in auth_middleware");
+    // JWT expiration is validated in auth_middleware
 }
 
 /// Tests that stand endpoint returns 409 when it's not the player's turn
@@ -652,9 +652,9 @@ fn test_jwt_expiration_validation_is_in_middleware() {
 /// - Returns appropriate error message
 #[tokio::test]
 async fn test_stand_not_your_turn() {
-    use axum::extract::State as AxumState;
-    use axum::extract::Path;
     use axum::Extension;
+    use axum::extract::Path;
+    use axum::extract::State as AxumState;
     use blackjack_api::auth::Claims;
     use blackjack_api::handlers::stand;
 
@@ -677,15 +677,25 @@ async fn test_stand_not_your_turn() {
     };
 
     // Create two users
-    let user1_id = user_service.register("player1@example.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
-    let user2_id = user_service.register("player2@example.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
+    let user1_id = user_service
+        .register(
+            "player1@example.com".to_string(),
+            "TestP@ssw0rd".to_string(),
+        )
+        .unwrap();
+    let user2_id = user_service
+        .register(
+            "player2@example.com".to_string(),
+            "TestP@ssw0rd".to_string(),
+        )
+        .unwrap();
 
     // Create game with player1
     let game_id = game_service.create_game(user1_id, None).unwrap();
-    
+
     // Enroll player2
     game_service.enroll_player(game_id, user2_id).unwrap();
-    
+
     // Close enrollment
     game_service.close_enrollment(game_id, user1_id).unwrap();
 
@@ -696,19 +706,23 @@ async fn test_stand_not_your_turn() {
         exp: (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp() as usize,
     };
 
-    let result = stand(
-        AxumState(state),
-        Extension(claims),
-        Path(game_id),
-    )
-    .await;
+    let result = stand(AxumState(state), Extension(claims), Path(game_id)).await;
 
-    assert!(result.is_err(), "Should reject stand when not player's turn");
+    assert!(
+        result.is_err(),
+        "Should reject stand when not player's turn"
+    );
 
     let error = result.unwrap_err();
     assert_eq!(error.status, 409, "Should return 409 Conflict");
-    assert_eq!(error.code, "NOT_YOUR_TURN", "Should return NOT_YOUR_TURN code");
-    assert_eq!(error.message, "It's not your turn", "Should return appropriate message");
+    assert_eq!(
+        error.code, "NOT_YOUR_TURN",
+        "Should return NOT_YOUR_TURN code"
+    );
+    assert_eq!(
+        error.message, "It's not your turn",
+        "Should return appropriate message"
+    );
 }
 
 /// Tests that draw_card endpoint returns 409 when game is already finished
@@ -720,9 +734,9 @@ async fn test_stand_not_your_turn() {
 /// - Returns appropriate error message
 #[tokio::test]
 async fn test_draw_card_game_already_finished() {
-    use axum::extract::State as AxumState;
-    use axum::extract::Path;
     use axum::Extension;
+    use axum::extract::Path;
+    use axum::extract::State as AxumState;
     use blackjack_api::auth::Claims;
     use blackjack_api::handlers::draw_card;
 
@@ -745,12 +759,17 @@ async fn test_draw_card_game_already_finished() {
     };
 
     // Create user and game
-    let user_id = user_service.register("player1@example.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
+    let user_id = user_service
+        .register(
+            "player1@example.com".to_string(),
+            "TestP@ssw0rd".to_string(),
+        )
+        .unwrap();
     let game_id = game_service.create_game(user_id, None).unwrap();
-    
+
     // Close enrollment
     game_service.close_enrollment(game_id, user_id).unwrap();
-    
+
     // Finish the game
     game_service.finish_game(game_id, user_id).unwrap();
 
@@ -761,17 +780,21 @@ async fn test_draw_card_game_already_finished() {
         exp: (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp() as usize,
     };
 
-    let result = draw_card(
-        AxumState(state),
-        Extension(claims),
-        Path(game_id),
-    )
-    .await;
+    let result = draw_card(AxumState(state), Extension(claims), Path(game_id)).await;
 
-    assert!(result.is_err(), "Should reject draw card when game is finished");
+    assert!(
+        result.is_err(),
+        "Should reject draw card when game is finished"
+    );
 
     let error = result.unwrap_err();
     assert_eq!(error.status, 409, "Should return 409 Conflict");
-    assert_eq!(error.code, "GAME_FINISHED", "Should return GAME_FINISHED code");
-    assert_eq!(error.message, "Game has already finished", "Should return appropriate message");
+    assert_eq!(
+        error.code, "GAME_FINISHED",
+        "Should return GAME_FINISHED code"
+    );
+    assert_eq!(
+        error.message, "Game has already finished",
+        "Should return appropriate message"
+    );
 }

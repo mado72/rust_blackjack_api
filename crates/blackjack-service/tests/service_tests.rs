@@ -80,13 +80,19 @@ fn test_create_game_too_many_players() {
 
     // Note: max_players config is not currently enforced (hardcoded at 10 in Game)
     // Creator is already enrolled, can add up to 9 more for total of 10
-    let p2_id = user_service.register("p2@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
+    let p2_id = user_service
+        .register("p2@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
     let result = service.enroll_player(game_id, p2_id);
     assert!(result.is_ok()); // Should succeed (total 2)
-    let p3_id = user_service.register("p3@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
+    let p3_id = user_service
+        .register("p3@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
     let result = service.enroll_player(game_id, p3_id);
     assert!(result.is_ok()); // Should succeed (total 3)
-    let p4_id = user_service.register("p4@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
+    let p4_id = user_service
+        .register("p4@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
     let result = service.enroll_player(game_id, p4_id);
     assert!(result.is_ok()); // Should succeed (total 4, config max_players not enforced yet)
 }
@@ -116,7 +122,9 @@ fn test_draw_card() {
         .id;
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    let player1_id = user_service.register("player1@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
+    let player1_id = user_service
+        .register("player1@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
     service.enroll_player(game_id, player1_id).unwrap();
     service.close_enrollment(game_id, creator_id).unwrap();
 
@@ -147,17 +155,19 @@ fn test_set_ace_value() {
         .id;
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    let player1_id = user_service.register("player1@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
+    let player1_id = user_service
+        .register("player1@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
     service.enroll_player(game_id, player1_id).unwrap();
     service.close_enrollment(game_id, creator_id).unwrap();
 
     let mut ace_card_id = None;
     for _ in 0..52 {
-        if let Ok(response) = service.draw_card(game_id, creator_id) {
-            if response.card.name == "A" {
-                ace_card_id = Some(response.card.id);
-                break;
-            }
+        if let Ok(response) = service.draw_card(game_id, creator_id)
+            && response.card.name == "A"
+        {
+            ace_card_id = Some(response.card.id);
+            break;
         }
     }
 
@@ -179,8 +189,12 @@ fn test_get_game_state() {
         .id;
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    let player1_id = user_service.register("player1@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
-    let player2_id = user_service.register("player2@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
+    let player1_id = user_service
+        .register("player1@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
+    let player2_id = user_service
+        .register("player2@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
     service.enroll_player(game_id, player1_id).unwrap();
     service.enroll_player(game_id, player2_id).unwrap();
 
@@ -202,8 +216,12 @@ fn test_finish_game() {
         .id;
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    let player1_id = user_service.register("player1@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
-    let player2_id = user_service.register("player2@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
+    let player1_id = user_service
+        .register("player1@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
+    let player2_id = user_service
+        .register("player2@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
     service.enroll_player(game_id, player1_id).unwrap();
     service.enroll_player(game_id, player2_id).unwrap();
 
@@ -231,8 +249,12 @@ fn test_concurrent_access() {
     let service = Arc::new(game_service);
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    let player1_id = user_service.register("player1@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
-    let player2_id = user_service.register("player2@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
+    let player1_id = user_service
+        .register("player1@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
+    let player2_id = user_service
+        .register("player2@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
     service.enroll_player(game_id, player1_id).unwrap();
     service.enroll_player(game_id, player2_id).unwrap();
     service.close_enrollment(game_id, creator_id).unwrap();
@@ -256,10 +278,10 @@ fn test_concurrent_access() {
 
     let mut success_count = 0;
     for handle in handles {
-        if let Ok(result) = handle.join() {
-            if result.is_ok() {
-                success_count += 1;
-            }
+        if let Ok(result) = handle.join()
+            && result.is_ok()
+        {
+            success_count += 1;
         }
     }
 
@@ -275,7 +297,9 @@ fn test_draw_until_deck_empty() {
         .id;
 
     let game_id = service.create_game(creator_id, None).unwrap();
-    let player1_id = user_service.register("player1@test.com".to_string(), "TestP@ssw0rd".to_string()).unwrap();
+    let player1_id = user_service
+        .register("player1@test.com".to_string(), "TestP@ssw0rd".to_string())
+        .unwrap();
     service.enroll_player(game_id, player1_id).unwrap();
     service.close_enrollment(game_id, creator_id).unwrap();
 
@@ -540,7 +564,9 @@ fn test_rbac_cannot_kick_creator() {
     let result = service.kick_player(game_id, creator_id, creator_id);
     assert!(matches!(
         result,
-        Err(GameError::CoreError(blackjack_core::GameError::CannotKickCreator))
+        Err(GameError::CoreError(
+            blackjack_core::GameError::CannotKickCreator
+        ))
     ));
 }
 

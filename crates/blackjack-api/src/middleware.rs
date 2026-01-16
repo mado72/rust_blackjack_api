@@ -310,10 +310,9 @@ pub async fn security_headers_middleware(
     );
 
     // Prevent clickjacking attacks
-    response.headers_mut().insert(
-        "X-Frame-Options",
-        HeaderValue::from_static("DENY"),
-    );
+    response
+        .headers_mut()
+        .insert("X-Frame-Options", HeaderValue::from_static("DENY"));
 
     // Enable XSS filter in browsers
     response.headers_mut().insert(

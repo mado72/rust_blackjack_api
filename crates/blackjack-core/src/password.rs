@@ -25,10 +25,11 @@
 /// # Ok(())
 /// # }
 /// ```
-
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher as _, PasswordVerifier, SaltString},
     Argon2, ParamsBuilder,
+    password_hash::{
+        PasswordHash, PasswordHasher as _, PasswordVerifier, SaltString, rand_core::OsRng,
+    },
 };
 use std::fmt;
 
@@ -48,7 +49,9 @@ impl fmt::Display for HashError {
         match self {
             HashError::InvalidPassword => write!(f, "Password is empty or invalid"),
             HashError::HashingFailed(msg) => write!(f, "Password hashing failed: {}", msg),
-            HashError::VerificationFailed(msg) => write!(f, "Password verification failed: {}", msg),
+            HashError::VerificationFailed(msg) => {
+                write!(f, "Password verification failed: {}", msg)
+            }
         }
     }
 }
@@ -94,16 +97,12 @@ pub fn hash_password(password: &str) -> Result<String, HashError> {
     // OWASP recommended parameters for Argon2id
     let params = ParamsBuilder::new()
         .m_cost(19456) // 19 MiB memory
-        .t_cost(2)      // 2 iterations
-        .p_cost(1)      // 1 thread
+        .t_cost(2) // 2 iterations
+        .p_cost(1) // 1 thread
         .build()
         .map_err(|e| HashError::HashingFailed(e.to_string()))?;
 
-    let argon2 = Argon2::new(
-        argon2::Algorithm::Argon2id,
-        argon2::Version::V0x13,
-        params,
-    );
+    let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
 
     // Generate random salt
     let salt = SaltString::generate(&mut OsRng);
@@ -188,7 +187,7 @@ mod tests {
         let password = "MySecureP@ssw0rd";
         let result = hash_password(password);
         assert!(result.is_ok());
-        
+
         let hash = result.unwrap();
         assert!(hash.starts_with("$argon2id$"));
     }
@@ -235,10 +234,10 @@ mod tests {
         let password = "MySecureP@ssw0rd";
         let hash1 = hash_password(password).unwrap();
         let hash2 = hash_password(password).unwrap();
-        
+
         // Different hashes due to different salts
         assert_ne!(hash1, hash2);
-        
+
         // Both should verify correctly
         assert!(verify_password(password, &hash1).unwrap());
         assert!(verify_password(password, &hash2).unwrap());
@@ -249,7 +248,7 @@ mod tests {
         // This test ensures the function doesn't panic on different inputs
         let password = "MySecureP@ssw0rd";
         let hash = hash_password(password).unwrap();
-        
+
         // All these should return Ok(bool), not panic
         let _ = verify_password("short", &hash);
         let _ = verify_password("very_long_password_with_many_characters", &hash);
