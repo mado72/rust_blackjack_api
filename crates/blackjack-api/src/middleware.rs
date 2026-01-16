@@ -4,7 +4,7 @@ use axum::extract::{Request, State};
 use axum::http::HeaderValue;
 use axum::middleware::Next;
 use axum::response::Response;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 
 /// JWT authentication middleware
 ///
@@ -77,7 +77,7 @@ pub async fn auth_middleware(
     next: Next,
 ) -> Result<Response, ApiError> {
     let headers = request.headers();
-    
+
     // If no Authorization header, allow the request (public route)
     let auth_header = match headers.get("Authorization").and_then(|h| h.to_str().ok()) {
         Some(header) => header,
@@ -229,16 +229,112 @@ pub async fn version_deprecation_middleware(
     let sunset_date = chrono::Utc::now()
         + chrono::Duration::days((state.config.api.version_deprecation_months * 30) as i64);
 
-    response.headers_mut().insert(
-        "X-API-Deprecated",
-        HeaderValue::from_static("false"),
-    );
+    response
+        .headers_mut()
+        .insert("X-API-Deprecated", HeaderValue::from_static("false"));
 
     response.headers_mut().insert(
         "X-API-Sunset-Date",
         HeaderValue::from_str(&sunset_date.format("%Y-%m-%d").to_string())
             .unwrap_or_else(|_| HeaderValue::from_static("N/A")),
     );
+
+    Ok(response)
+}
+
+/// Security headers middleware (Milestone 8)
+///
+/// Adds security-related HTTP headers to all responses to protect against
+/// common web vulnerabilities.
+///
+/// # Headers Added
+///
+/// - **X-Content-Type-Options: nosniff**
+///   - Prevents MIME type sniffing
+///   - Forces browsers to respect declared Content-Type
+///
+/// - **X-Frame-Options: DENY**
+///   - Prevents clickjacking attacks
+///   - Blocks embedding in iframes
+///
+/// - **X-XSS-Protection: 1; mode=block**
+///   - Enables browser XSS filter
+///   - Blocks page load on XSS detection
+///
+/// - **Strict-Transport-Security: max-age=31536000; includeSubDomains**
+///   - Forces HTTPS connections
+///   - Applies to all subdomains
+///   - 1 year max-age
+///
+/// - **Content-Security-Policy: default-src 'self'**
+///   - Restricts resource loading to same origin
+///   - Prevents inline scripts and styles by default
+///   - Mitigates XSS attacks
+///
+/// # Example
+///
+/// ```ignore
+/// use axum::middleware;
+/// use blackjack_api::middleware::security_headers_middleware;
+///
+/// let app = Router::new()
+///     .route("/", get(handler))
+///     .layer(middleware::from_fn(security_headers_middleware));
+/// ```
+///
+/// # Security Best Practices
+///
+/// This middleware implements OWASP recommendations:
+/// - Clickjacking protection (X-Frame-Options)
+/// - MIME sniffing protection (X-Content-Type-Options)
+/// - XSS protection (X-XSS-Protection, CSP)
+/// - HTTPS enforcement (Strict-Transport-Security)
+///
+/// # Production Deployment
+///
+/// For production environments:
+/// 1. Ensure HTTPS is configured at load balancer/reverse proxy
+/// 2. Consider adding Referrer-Policy header
+/// 3. Consider adding Permissions-Policy header
+/// 4. Review CSP policy for your specific needs
+pub async fn security_headers_middleware(
+    request: Request,
+    next: Next,
+) -> Result<Response, ApiError> {
+    let mut response = next.run(request).await;
+
+    // Prevent MIME type sniffing
+    response.headers_mut().insert(
+        "X-Content-Type-Options",
+        HeaderValue::from_static("nosniff"),
+    );
+
+    // Prevent clickjacking attacks
+    response.headers_mut().insert(
+        "X-Frame-Options",
+        HeaderValue::from_static("DENY"),
+    );
+
+    // Enable XSS filter in browsers
+    response.headers_mut().insert(
+        "X-XSS-Protection",
+        HeaderValue::from_static("1; mode=block"),
+    );
+
+    // Force HTTPS connections (only in production)
+    // Note: This should be commented out in development without HTTPS
+    response.headers_mut().insert(
+        "Strict-Transport-Security",
+        HeaderValue::from_static("max-age=31536000; includeSubDomains"),
+    );
+
+    // Content Security Policy - restrict resource loading
+    response.headers_mut().insert(
+        "Content-Security-Policy",
+        HeaderValue::from_static("default-src 'self'"),
+    );
+
+    tracing::trace!("Security headers added to response");
 
     Ok(response)
 }

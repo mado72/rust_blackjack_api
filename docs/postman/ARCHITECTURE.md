@@ -1,19 +1,22 @@
 # Blackjack API Architecture
 
-**Status:** ✅ **FULLY IMPLEMENTED**  
-**Last Updated:** January 8, 2026
+**Status:** ✅ **FULLY IMPLEMENTED + ENHANCED SCORING**  
+**Last Updated:** January 15, 2026  
+**Tests:** 106 passing (60 integration tests in core)
 
 ## Overview
 
-The Blackjack API is a turn-based multiplayer REST API built with Rust/Axum. It features user authentication, game invitation system, and turn-based gameplay with automatic completion.
+The Blackjack API is a turn-based multiplayer REST API built with Rust/Axum. It features user authentication, game invitation system, turn-based gameplay with automatic dealer play, and comprehensive per-player scoring.
 
 **Key Features:**
 - 🔐 User registration and JWT authentication
 - 📨 Game invitation system with configurable timeouts
 - 🎮 Turn-based card drawing with validation
-- 📊 Real-time game state tracking
-- ⚡ Automatic game completion
+- 🎲 **Automatic dealer play** when all players finish
+- 📊 **Enhanced scoring** with individual outcomes (Won/Lost/Push/Busted)
 - 🏆 Player state management (Active/Standing/Busted)
+- ⚡ Automatic game completion
+- 🎯 Real-time game state tracking
 
 ## Architecture Layers
 
@@ -44,6 +47,34 @@ The core layer contains all business logic and domain models:
 - `stand()` - Marks player as standing
 - `check_auto_finish()` - Auto-finishes when all players done
 - `add_player()` - Adds player from invitation acceptance
+
+**Dealer Logic (NEW - January 15, 2026):**
+- `play_dealer()` - Automatic dealer play
+  - Draws cards until reaching 17+ points
+  - Marks dealer as standing when finished (not busted)
+  - Comprehensive logging at info and debug levels
+  - Triggered automatically when all players finish
+  - Cannot play after game finished
+  - Handles empty deck scenario
+
+**Enhanced Scoring (NEW - January 15, 2026):**
+- `PlayerOutcome` enum: Won, Lost, Push, Busted
+- `PlayerResult` struct:
+  - `points`: Final score
+  - `cards_count`: Number of cards
+  - `busted`: Whether player busted
+  - `outcome`: Individual outcome vs dealer
+- Enhanced `GameResult`:
+  - `player_results`: HashMap with detailed per-player outcomes
+  - `dealer_points`: Dealer's final score
+  - `dealer_busted`: Whether dealer busted
+  - Backward-compatible with existing fields
+- `calculate_results()` - Enhanced to populate detailed outcomes
+  **Automatic dealer triggering** - When all players finish
+- **Automatic game completion** - After dealer plays
+- **Enhanced results** - Detailed per-player outcomesed for each player
+  - Handles all tie scenarios (multiple winners, all push, all lose)
+  - Maintains legacy winner/tied_players logic
 
 ### Service Layer (`blackjack-service`)
 
@@ -102,9 +133,9 @@ The API layer exposes HTTP endpoints:
 - `GET /health` - Server health status
 - `GET /health/ready` - Component readiness
 
-### Game Management (4 endpoints)
-- `POST /api/v1/games` - Create new game
-- `GET /api/v1/games/:id` - Get game state with turn info
+### Game Management (4 endpoints) and dealer state
+- `POST /api/v1/games/:id/finish` - Finish game manually
+- `GET /api/v1/games/:id/results` - **View enhanced results with per-player outcomes**turn info
 - `POST /api/v1/games/:id/finish` - Finish game manually
 - `GET /api/v1/games/:id/results` - View results
 
@@ -189,22 +220,43 @@ POST /api/v1/games/:id/draw → Draw card (only on your turn)
 POST /api/v1/games/:id/stand → Stand when done
 ```
 
-### 5. Game Completion
-```
-Game auto-finishes when all players stand/bust
-GET /api/v1/games/:id/results → View final results
-```
+**Automatic Dealer Play:**
+- When last player stands, dealer automatically plays
+- Dealer draws until reaching 17+ points
+- Game finishes automatically after dealer completes
 
-## Testing
+### 5. Game Completion & Results
+```
+Game auto-finishes when all players stand/bust (triggers dealer)
+GET /api/v1/games/:id/results → View detailed results
 
-### Run All Tests
+Results include:
+- Individual outcomes for each player (Won/Lost/Push/Busted)
+- Dealer final state (points, busted)
+- Overall winner or tie determination
+- Backward-com60 tests (integration)
+- Service layer: 13 tests  
+- API layer: 20 tests
+- CLI: 13 tests
+
+**Total: 106 tests passing** ✅
+
+**Test Coverage:**
+- ✅ Dealer automatic play (11 tests)
+- ✅ Enhanced scoring with all outcomes (12 tests)
+- ✅ Turn management and validation
+- ✅ Enrollment and invitations
+- ✅ All tie/draw scenarios
 ```bash
 cargo test --workspace
-```
-
-### Test Breakdown
-- Core layer: 19 tests
-- Service layer: 12 tests  
+```Dealer Play**: Dealer automatically plays when all players finish (stand/bust)
+3. **Enhanced Scoring**: Individual outcomes (Won/Lost/Push/Busted) for each player
+4. **Automatic Completion**: Game finishes after dealer completes play
+5. **Invitation Expiration**: Configurable timeouts with automatic cleanup
+6. **JWT Authentication**: 24-hour tokens with user_id and email claims
+7. **Rate Limiting**: Per-user rate limiting to prevent abuse
+8. **Placeholder Authentication**: Simple password hashing (to be enhanced with Argon2)
+9. **Backward Compatibility**: New scoring fields added while preserving existing API
 - API layer: 16 tests
 - CLI: 13 tests
 
@@ -216,11 +268,18 @@ cargo test --workspace
 - PowerShell script: `test_api.ps1`
 
 ## Technical Decisions
+Completed (January 15, 2026) ✅
+- ✅ Automatic dealer play with comprehensive logging
+- ✅ Enhanced scoring with per-player outcomes
+- ✅ All tie/draw scenario handling
+- ✅ Detailed game results endpoint
 
-1. **Turn-Based Flow**: Players can only act on their turn, enforced by `can_player_act()` validation
-2. **Automatic Completion**: Game finishes when all players stand or bust
-3. **Invitation Expiration**: Configurable timeouts with automatic cleanup
-4. **JWT Authentication**: 24-hour tokens with user_id and email claims
+### High Priority
+- Argon2 password hashing
+- Database persistence (PostgreSQL)
+- Integration tests for complete workflows
+- WebSocket support for real-time updates
+- Two-player concurrent testing (Postman environments created) with user_id and email claims
 5. **Rate Limiting**: Per-user rate limiting to prevent abuse
 6. **Placeholder Authentication**: Simple password hashing (to be enhanced with Argon2)
 
@@ -240,12 +299,15 @@ cargo test --workspace
 
 ### Low Priority
 - Multi-deck support
-- Tournament mode
-- Spectator mode
-- Replay system
-
-## Code Structure
-
+- TournaPlayerOutcome, PlayerResult (NEW)
+│   ├── Turn management
+│   ├── Dealer logic with auto-play (NEW)
+│   ├── Enhanced scoring system (NEW)
+│   └── Auto-finish logic
+│
+├── blackjack-service/      # Service orchestration
+│   ├── UserService
+│   ├── GameService (with dealer triggering)
 ```
 crates/
 ├── blackjack-core/         # Domain models and business logic
@@ -274,9 +336,12 @@ crates/
 - JWT-based authentication
 - Rate limiting per user
 - Password hashing (placeholder, upgrade to Argon2 planned)
-- Input validation on all endpoints
-- Turn validation prevents unauthorized actions
-
+- ITWO_PLAYER_TESTING_GUIDE.md](TWO_PLAYER_TESTING_GUIDE.md) - Concurrent multi-player testing
+- [DEALER_CURL_EXAMPLES.md](DEALER_CURL_EXAMPLES.md) - Complete flow with dealer auto-play
+- [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
+- [POSTMAN_GUIDE.md](POSTMAN_GUIDE.md)
+- [CURL_EXAMPLES.md](CURL_EXAMPLES.md)
+- [DEALER_IMPLEMENTATION.md](../DEALER_IMPLEMENTATION.md) - Dealer logic documentation
 ## Performance Considerations
 
 - In-memory storage (for now)

@@ -84,32 +84,32 @@
 //! # Implementation Blueprint
 
 /* TODO: WebSocket real-time notifications
- * 
+ *
  * Dependencies to add to Cargo.toml:
  * ```toml
  * axum = { version = "0.7", features = ["ws"] }
  * tokio = { version = "1", features = ["sync"] }
  * ```
- * 
+ *
  * Data Structures:
- * 
+ *
  * /// Game notification sent to WebSocket clients
  * #[derive(Debug, Clone, Serialize, Deserialize)]
  * pub struct GameNotification {
  *     /// Type of event: "draw_card", "ace_changed", "game_finished"
  *     pub event_type: String,
- *     
+ *
  *     /// Email of the player who triggered the event
  *     /// Use "all" for game-wide events like game_finished
  *     pub player_email: String,
- *     
+ *
  *     /// Game UUID as a string
  *     pub game_id: String,
- *     
+ *
  *     /// Event-specific data as JSON
  *     pub data: serde_json::Value,
  * }
- * 
+ *
  * /// Authentication message format
  * #[derive(Debug, Deserialize)]
  * struct AuthMessage {
@@ -117,34 +117,34 @@
  *     msg_type: String,  // Must be "auth"
  *     token: String,     // JWT token
  * }
- * 
+ *
  * /// Connection manager to track active WebSocket connections
  * #[derive(Clone)]
  * pub struct ConnectionManager {
  *     /// Map of game_id to list of broadcast senders
  *     games: Arc<Mutex<HashMap<String, Vec<tokio::sync::mpsc::UnboundedSender<GameNotification>>>>>,
  * }
- * 
+ *
  * Handler Implementation:
- * 
+ *
  * /// WebSocket upgrade handler
- * /// 
+ * ///
  * /// Endpoint: GET /ws
- * /// 
+ * ///
  * /// # Authentication
- * /// 
+ * ///
  * /// The first message after WebSocket handshake MUST be an authentication message:
  * /// ```json
  * /// {"type": "auth", "token": "JWT_TOKEN_HERE"}
  * /// ```
- * /// 
+ * ///
  * /// If authentication fails or times out (5 seconds), the connection is closed.
- * /// 
+ * ///
  * /// # Example
- * /// 
+ * ///
  * /// ```javascript
  * /// const ws = new WebSocket('ws://localhost:8080/ws');
- * /// 
+ * ///
  * /// ws.onopen = () => {
  * ///   // Authenticate immediately
  * ///   ws.send(JSON.stringify({
@@ -152,7 +152,7 @@
  * ///     token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
  * ///   }));
  * /// };
- * /// 
+ * ///
  * /// ws.onmessage = (event) => {
  * ///   const notification = JSON.parse(event.data);
  * ///   console.log('Game event:', notification);
@@ -164,11 +164,11 @@
  * ) -> Response {
  *     ws.on_upgrade(|socket| handle_socket(socket, state))
  * }
- * 
+ *
  * /// Handle individual WebSocket connection
- * /// 
+ * ///
  * /// # Authentication Flow
- * /// 
+ * ///
  * /// 1. Wait up to 5 seconds for auth message
  * /// 2. Validate JWT token and extract claims
  * /// 3. Subscribe to game notifications
@@ -179,7 +179,7 @@
  *     state: AppState,
  * ) {
  *     let (mut sender, mut receiver) = socket.split();
- *     
+ *
  *     // Wait for authentication message with timeout
  *     let auth_timeout = tokio::time::Duration::from_secs(5);
  *     let auth_result = tokio::time::timeout(
@@ -191,21 +191,21 @@
  *                     if auth_msg.msg_type != "auth" {
  *                         return Err("First message must be auth");
  *                     }
- *                     
+ *
  *                     // Validate JWT token
  *                     let claims = decode::<Claims>(
  *                         &auth_msg.token,
  *                         &DecodingKey::from_secret(state.config.jwt.secret.as_bytes()),
  *                         &Validation::default(),
  *                     ).map_err(|_| "Invalid token")?;
- *                     
+ *
  *                     Ok(claims.claims)
  *                 },
  *                 _ => Err("Expected auth message"),
  *             }
  *         }
  *     ).await;
- *     
+ *
  *     let claims = match auth_result {
  *         Ok(Ok(claims)) => claims,
  *         _ => {
@@ -214,19 +214,19 @@
  *             return;
  *         }
  *     };
- *     
+ *
  *     tracing::info!(
  *         email = claims.email,
  *         game_id = claims.game_id,
  *         "WebSocket connection authenticated"
  *     );
- *     
+ *
  *     // Create channel for this connection
  *     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
- *     
+ *
  *     // Subscribe to game notifications
  *     state.connection_manager.subscribe(claims.game_id.clone(), tx);
- *     
+ *
  *     // Spawn task to forward notifications to client
  *     let mut send_task = tokio::spawn(async move {
  *         while let Some(notification) = rx.recv().await {
@@ -237,7 +237,7 @@
  *             }
  *         }
  *     });
- *     
+ *
  *     // Wait for client disconnect
  *     let mut recv_task = tokio::spawn(async move {
  *         while let Some(msg) = receiver.next().await {
@@ -246,32 +246,32 @@
  *             }
  *         }
  *     });
- *     
+ *
  *     // Wait for either task to complete
  *     tokio::select! {
  *         _ = (&mut send_task) => recv_task.abort(),
  *         _ = (&mut recv_task) => send_task.abort(),
  *     }
- *     
+ *
  *     // Clean up subscription
  *     state.connection_manager.unsubscribe(&claims.game_id, &claims.email);
- *     
+ *
  *     tracing::info!(
  *         email = claims.email,
  *         game_id = claims.game_id,
  *         "WebSocket connection closed"
  *     );
  * }
- * 
+ *
  * Integration with GameService:
- * 
+ *
  * After successful operations (draw_card, set_ace_value, finish_game),
  * broadcast notifications to all connected clients in the game:
- * 
+ *
  * ```rust
  * // In draw_card handler
  * let response = state.game_service.draw_card(game_id, claims.email.clone())?;
- * 
+ *
  * // Broadcast notification
  * state.connection_manager.broadcast(
  *     &game_id.to_string(),
@@ -283,14 +283,14 @@
  *     }
  * );
  * ```
- * 
+ *
  * Router Integration:
- * 
+ *
  * Add to router in main.rs:
  * ```rust
  * use axum::routing::get;
  * use blackjack_api::websocket::websocket_handler;
- * 
+ *
  * let app = Router::new()
  *     .route("/ws", get(websocket_handler))
  *     // ... other routes

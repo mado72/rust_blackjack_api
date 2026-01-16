@@ -1,6 +1,6 @@
+use axum::Json;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use serde::Serialize;
 use std::collections::HashMap;
 
@@ -40,13 +40,13 @@ pub struct ApiError {
     /// Human-readable error message describing what went wrong
     pub message: String,
     /// Machine-readable error code (e.g., "UNAUTHORIZED", "RATE_LIMIT_EXCEEDED")
-    /// 
+    ///
     /// These codes are stable and can be used by clients for error handling logic
     pub code: String,
     /// HTTP status code as a number (e.g., 400, 401, 404, 429, 500)
     pub status: u16,
     /// Optional additional context about the error
-    /// 
+    ///
     /// Useful for validation errors or providing debugging information.
     /// This field is omitted from JSON if None.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -128,7 +128,11 @@ impl ApiError {
     /// assert_eq!(error.code, "UNAUTHORIZED");
     /// ```
     pub fn unauthorized() -> Self {
-        Self::new(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", "Authentication required")
+        Self::new(
+            StatusCode::UNAUTHORIZED,
+            "UNAUTHORIZED",
+            "Authentication required",
+        )
     }
 
     /// Creates a 429 Too Many Requests error
@@ -267,55 +271,114 @@ impl From<blackjack_service::GameError> for ApiError {
             GameError::InvalidPlayerCount { min, max, provided } => {
                 Self::invalid_player_count(min, max, provided)
             }
-            GameError::GameFull => {
-                Self::new(StatusCode::BAD_REQUEST, "GAME_FULL", "Game is at maximum capacity (10 players)")
-            }
-            GameError::EnrollmentClosed => {
-                Self::new(StatusCode::GONE, "ENROLLMENT_CLOSED", "Enrollment for this game is closed")
-            }
+            GameError::GameFull => Self::new(
+                StatusCode::BAD_REQUEST,
+                "GAME_FULL",
+                "Game is at maximum capacity (10 players)",
+            ),
+            GameError::EnrollmentClosed => Self::new(
+                StatusCode::GONE,
+                "ENROLLMENT_CLOSED",
+                "Enrollment for this game is closed",
+            ),
             GameError::InvalidEmail(msg) => {
                 Self::new(StatusCode::BAD_REQUEST, "INVALID_EMAIL", msg)
             }
-            GameError::DeckEmpty => {
-                Self::new(StatusCode::BAD_REQUEST, "DECK_EMPTY", "No more cards in deck")
-            }
-            GameError::GameAlreadyFinished => {
-                Self::new(StatusCode::BAD_REQUEST, "GAME_FINISHED", "Game has already finished")
-            }
+            GameError::DeckEmpty => Self::new(
+                StatusCode::BAD_REQUEST,
+                "DECK_EMPTY",
+                "No more cards in deck",
+            ),
+            GameError::GameAlreadyFinished => Self::new(
+                StatusCode::CONFLICT,
+                "GAME_FINISHED",
+                "Game has already finished",
+            ),
             GameError::UserNotFound => {
                 Self::new(StatusCode::NOT_FOUND, "USER_NOT_FOUND", "User not found")
             }
             GameError::UserAlreadyExists => {
                 Self::new(StatusCode::CONFLICT, "USER_EXISTS", "User already exists")
             }
-            GameError::InvalidCredentials => {
-                Self::unauthorized()
-            }
-            GameError::InvitationNotFound => {
-                Self::new(StatusCode::NOT_FOUND, "INVITATION_NOT_FOUND", "Invitation not found")
-            }
-            GameError::InvitationExpired => {
-                Self::new(StatusCode::GONE, "INVITATION_EXPIRED", "Invitation has expired")
-            }
-            GameError::InvalidTimeout { max } => {
-                Self::new(
-                    StatusCode::BAD_REQUEST,
-                    "INVALID_TIMEOUT",
-                    format!("Timeout exceeds maximum of {} seconds", max),
-                )
-            }
+            GameError::InvalidCredentials => Self::unauthorized(),
+            GameError::InvitationNotFound => Self::new(
+                StatusCode::NOT_FOUND,
+                "INVITATION_NOT_FOUND",
+                "Invitation not found",
+            ),
+            GameError::InvitationExpired => Self::new(
+                StatusCode::GONE,
+                "INVITATION_EXPIRED",
+                "Invitation has expired",
+            ),
+            GameError::InvalidTimeout { max } => Self::new(
+                StatusCode::BAD_REQUEST,
+                "INVALID_TIMEOUT",
+                format!("Timeout exceeds maximum of {} seconds", max),
+            ),
             GameError::NotPlayerTurn => {
                 Self::new(StatusCode::FORBIDDEN, "NOT_YOUR_TURN", "It's not your turn")
             }
-            GameError::PlayerNotActive => {
-                Self::new(StatusCode::FORBIDDEN, "PLAYER_NOT_ACTIVE", "Player is not active")
-            }
-            GameError::NotGameCreator => {
-                Self::new(StatusCode::FORBIDDEN, "NOT_GAME_CREATOR", "Only the game creator can perform this action")
-            }
-            GameError::CoreError(core_err) => {
-                Self::new(StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", core_err.to_string())
-            }
+            GameError::PlayerNotActive => Self::new(
+                StatusCode::FORBIDDEN,
+                "PLAYER_NOT_ACTIVE",
+                "Player is not active",
+            ),
+            GameError::NotGameCreator => Self::new(
+                StatusCode::FORBIDDEN,
+                "NOT_GAME_CREATOR",
+                "Only the game creator can perform this action",
+            ),
+            GameError::EnrollmentNotClosed => Self::new(
+                StatusCode::CONFLICT,
+                "ENROLLMENT_NOT_CLOSED",
+                "Cannot play until enrollment is closed",
+            ),
+            GameError::PlayerAlreadyEnrolled => Self::new(
+                StatusCode::CONFLICT,
+                "PLAYER_ALREADY_ENROLLED",
+                "Player is already enrolled in this game",
+            ),
+            GameError::GameNotActive => Self::new(
+                StatusCode::GONE,
+                "GAME_NOT_ACTIVE",
+                "Game is not active or has been deleted",
+            ),
+            GameError::WeakPassword(msg) => Self::new(
+                StatusCode::BAD_REQUEST,
+                "WEAK_PASSWORD",
+                msg,
+            ),
+            GameError::AccountInactive => Self::new(
+                StatusCode::FORBIDDEN,
+                "ACCOUNT_INACTIVE",
+                "Account is inactive or suspended",
+            ),
+            GameError::InsufficientPermissions => Self::new(
+                StatusCode::FORBIDDEN,
+                "INSUFFICIENT_PERMISSIONS",
+                "You don't have permission to perform this action",
+            ),
+            GameError::AccountLocked => Self::new(
+                StatusCode::FORBIDDEN,
+                "ACCOUNT_LOCKED",
+                "Account is locked due to too many failed login attempts",
+            ),
+            GameError::ValidationError(msg) => Self::new(
+                StatusCode::BAD_REQUEST,
+                "VALIDATION_ERROR",
+                msg,
+            ),
+            GameError::PasswordHashError(_) => Self::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "PASSWORD_HASH_ERROR",
+                "Failed to hash password",
+            ),
+            GameError::CoreError(core_err) => Self::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                core_err.to_string(),
+            ),
         }
     }
 }

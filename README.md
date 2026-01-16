@@ -8,13 +8,15 @@ This project provides a complete backend system for managing multi-player Blackj
 
 - **RESTful API**: Versioned endpoints under `/api/v1` with OpenAPI-style documentation
 - **JWT Authentication**: Secure player authentication per game session
-- **User Management**: User registration, login, and persistent accounts (M7)
-- **Turn-Based Gameplay**: Ordered turns, automatic advancement, smart turn skipping (M7)
-- **Game Invitations**: Invite system with configurable timeouts and status tracking (M7)
+- **Security Hardening (M8)**: Argon2id password hashing, RBAC, security headers
+- **User Management**: User registration, login, persistent accounts, password changes
+- **Access Control (M8)**: Role-based permissions (Creator, Player, Spectator)
+- **Turn-Based Gameplay**: Ordered turns, automatic advancement, smart turn skipping
+- **Game Invitations**: Invite system with configurable timeouts and status tracking
 - **Rate Limiting**: Per-user request throttling using sliding window algorithm
 - **Real-time Ready**: WebSocket blueprint for future real-time notifications
 - **Observability**: Structured logging with tracing, health checks, and metrics-ready architecture
-- **Production-Grade**: External configuration, CORS support, graceful error handling
+- **Production-Grade**: External configuration, CORS support, graceful error handling, security headers
 - **Multi-player Support**: 1-10 players per game with independent state management
 - **Flexible Gameplay**: Dynamic Ace values (1 or 11), ordered card history, bust detection
 
@@ -345,6 +347,21 @@ Readiness check for orchestration systems (Kubernetes, etc.).
 
 ### Authentication
 
+#### Password Requirements (Milestone 8 Security)
+
+All passwords must meet the following complexity requirements:
+- **Minimum length**: 8 characters
+- **Must contain**:
+  - At least one uppercase letter (A-Z)
+  - At least one lowercase letter (a-z)
+  - At least one digit (0-9)
+  - At least one special character (!@#$%^&*)
+
+**Valid password examples:**
+- `MyP@ssw0rd`
+- `Secure#Pass123`
+- `Test!User2024`
+
 #### POST /api/v1/auth/register
 
 Register a new user account. (Milestone 7)
@@ -353,7 +370,7 @@ Register a new user account. (Milestone 7)
 ```json
 {
   "email": "newplayer@example.com",
-  "password": "SecurePass123!"
+  "password": "Secure#Pass123"
 }
 ```
 
@@ -367,7 +384,9 @@ Register a new user account. (Milestone 7)
 ```
 
 **Errors:**
-- `400` - Invalid email format or password too weak
+- `400` - Invalid email format
+- `400` - Weak password (doesn't meet complexity requirements)
+  - Error includes specific requirements that weren't met
 - `409` - Email already registered
 
 #### POST /api/v1/auth/login
@@ -378,7 +397,7 @@ Login with existing user credentials. (Milestone 7)
 ```json
 {
   "email": "player1@example.com",
-  "password": "SecurePass123!"
+  "password": "Secure#Pass123"
 }
 ```
 
@@ -391,7 +410,8 @@ Login with existing user credentials. (Milestone 7)
 ```
 
 **Errors:**
-- `401` - Invalid credentials
+- `401` - Invalid credentials (wrong email or password)
+- `403` - Account inactive (account has been deactivated)
 - `404` - User not found
 
 
@@ -726,8 +746,8 @@ Authorization: Bearer <jwt_token>
 **Errors:**
 - `401` - Unauthorized
 - `404` - Game or player not found
-- `409` - Not your turn (NOT_YOUR_TURN)
-- `410` - Deck is empty OR enrollment still open
+- `409` - Not your turn (NOT_YOUR_TURN) OR enrollment still open (ENROLLMENT_NOT_CLOSED)
+- `410` - Deck is empty
 
 #### POST /api/v1/games/:game_id/stand
 
@@ -989,13 +1009,16 @@ All 4 endpoints are:
 
 ### Data Structures
 
-#### User Model
+#### User Model (Updated in Milestone 8)
 ```rust
 pub struct User {
-    pub id: Uuid,              // Unique user identifier
-    pub email: String,         // Email address (unique)
-    pub password_hash: String, // Hashed password
-    pub created_at: DateTime<Utc>,
+    pub id: Uuid,                        // Unique user identifier
+    pub email: String,                   // Email address (unique)
+    pub password_hash: String,           // Argon2id hashed password (M8)
+    pub is_active: bool,                 // Account status (M8)
+    pub last_login: Option<String>,      // Last login timestamp (M8)
+    pub created_at: Option<String>,      // Account creation timestamp
+    pub stats: Option<UserStats>,        // Player statistics
 }
 ```
 
@@ -1029,6 +1052,49 @@ pub enum PlayerState {
 }
 ```
 
+#### Access Control System (Milestone 8)
+
+**Game Roles:**
+```rust
+pub enum GameRole {
+    Creator,    // User who created the game (all permissions)
+    Player,     // Regular enrolled player (own actions only)
+    Spectator,  // Future: read-only access
+}
+```
+
+**Game Permissions:**
+- `InvitePlayers` - Invite other users to join (Creator only)
+- `KickPlayers` - Remove players from game (Creator only)
+- `CloseEnrollment` - Manually close enrollment (Creator only)
+- `FinishGame` - Manually finish game (Creator only)
+- `ModifySettings` - Change game settings (Creator only)
+
+**Game Participant:**
+```rust
+pub struct GameParticipant {
+    pub user_id: Uuid,
+    pub email: String,
+    pub role: GameRole,
+    pub joined_at: String,
+}
+```
+
+**Access Control Methods:**
+```rust
+// Check if user can perform an action
+game.can_user_perform(user_id, permission) -> bool
+
+// Get user's role in the game
+game.get_participant_role(user_id) -> Option<GameRole>
+
+// Check if user is the creator
+game.is_creator(user_id) -> bool
+
+// Check if user is a participant
+game.is_participant(user_id) -> bool
+```
+
 #### Enhanced Game Model
 The `Game` struct now includes:
 - `turn_order: Vec<String>` - Ordered list of player emails
@@ -1038,13 +1104,16 @@ The `Game` struct now includes:
 
 ### New Services
 
-#### UserService
+#### UserService (Enhanced in Milestone 8)
 ```rust
-// Register new user
-user_service.register(email, password) -> Result<User>
+// Register new user with password validation and Argon2id hashing
+user_service.register(email, password) -> Result<Uuid>
 
-// Login existing user  
+// Login with constant-time password verification
 user_service.login(email, password) -> Result<User>
+
+// Change password with validation
+user_service.change_password(user_id, old_password, new_password) -> Result<()>
 
 // Get user by ID
 user_service.get_user(user_id) -> Result<User>
@@ -1144,9 +1213,19 @@ pub struct Claims {
 
 ### Technical Decisions
 
-#### Password Security
-- Currently uses placeholder hashing: `"placeholder_hash_{password}"`
-- **Production TODO**: Implement proper password hashing (bcrypt, argon2)
+#### Password Security (✅ Implemented in Milestone 8)
+- **Hashing Algorithm**: Argon2id (OWASP recommended)
+- **Parameters**:
+  - Memory cost: 19456 KiB (19 MiB)
+  - Time cost: 2 iterations
+  - Parallelism: 1 thread
+  - Random 16-byte salt per hash
+- **Security Features**:
+  - Constant-time password verification (timing attack protection)
+  - Email format validation (RFC 5322)
+  - Password complexity validation
+  - Account status tracking (`is_active` field)
+  - Last login timestamp tracking
 
 #### Turn Management
 - Automatic turn advancement when player stands or busts

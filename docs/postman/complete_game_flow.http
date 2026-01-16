@@ -1,0 +1,367 @@
+### ============================================
+### COMPLETE GAME FLOW - Full Lifecycle Test
+### Includes: Create → Enroll → Play Turns → Stand → Auto Dealer → Results
+### ============================================
+
+@base_url = http://localhost:8080
+@creator_email = creator@example.com
+@player1_email = player1@example.com
+@player2_email = player2@example.com
+
+# Variables populated from responses
+@game_id = 
+@creator_token = 
+@player1_token = 
+@player2_token = 
+
+### ============================================
+### STEP 1: User Registration
+### ============================================
+
+### Register Creator
+# @name registerCreator
+POST {{base_url}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{creator_email}}",
+  "password": "SecurePass123!"
+}
+
+###
+
+### Register Player 1
+# @name registerPlayer1
+POST {{base_url}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{player1_email}}",
+  "password": "PlayerPass1!"
+}
+
+###
+
+### Register Player 2
+# @name registerPlayer2
+POST {{base_url}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{player2_email}}",
+  "password": "PlayerPass2!"
+}
+
+###
+
+### ============================================
+### STEP 2: Create Game with Enrollment
+### ============================================
+
+### Create Game (as Creator)
+# @name createGame
+POST {{base_url}}/api/v1/games
+Content-Type: application/json
+
+{
+  "enrollment_timeout_seconds": 600
+}
+
+# Extract game_id from response
+# @game_id = {{createGame.response.body.game_id}}
+
+###
+
+### Get Open Games (Verify game is listed)
+GET {{base_url}}/api/v1/games/open
+Content-Type: application/json
+
+###
+
+### ============================================
+### STEP 3: Player Enrollment
+### ============================================
+
+### Enroll Player 1
+POST {{base_url}}/api/v1/games/{{game_id}}/enroll
+Content-Type: application/json
+
+{
+  "player_email": "{{player1_email}}"
+}
+
+###
+
+### Enroll Player 2
+POST {{base_url}}/api/v1/games/{{game_id}}/enroll
+Content-Type: application/json
+
+{
+  "player_email": "{{player2_email}}"
+}
+
+###
+
+### Close Enrollment (as Creator)
+POST {{base_url}}/api/v1/games/{{game_id}}/close-enrollment
+Content-Type: application/json
+
+###
+
+### ============================================
+### STEP 4: Authentication & Get Initial State
+### ============================================
+
+### Login Creator
+# @name loginCreator
+POST {{base_url}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{creator_email}}",
+  "game_id": "{{game_id}}"
+}
+
+# @creator_token = {{loginCreator.response.body.token}}
+
+###
+
+### Login Player 1
+# @name loginPlayer1
+POST {{base_url}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{player1_email}}",
+  "game_id": "{{game_id}}"
+}
+
+# @player1_token = {{loginPlayer1.response.body.token}}
+
+###
+
+### Login Player 2
+# @name loginPlayer2
+POST {{base_url}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{player2_email}}",
+  "game_id": "{{game_id}}"
+}
+
+# @player2_token = {{loginPlayer2.response.body.token}}
+
+###
+
+### Get Game State - Check turn order
+GET {{base_url}}/api/v1/games/{{game_id}}
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###
+
+### ============================================
+### STEP 5: Turn-Based Gameplay
+### ============================================
+
+### TURN 1: Creator draws first card
+POST {{base_url}}/api/v1/games/{{game_id}}/draw
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###
+
+### TURN 1: Creator draws second card
+POST {{base_url}}/api/v1/games/{{game_id}}/draw
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###
+
+### TURN 1: Creator checks state (should show points)
+GET {{base_url}}/api/v1/games/{{game_id}}
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###
+
+### TURN 1: Creator stands (ends turn)
+POST {{base_url}}/api/v1/games/{{game_id}}/stand
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###
+
+### TURN 2: Player1 draws first card
+POST {{base_url}}/api/v1/games/{{game_id}}/draw
+Authorization: Bearer {{player1_token}}
+Content-Type: application/json
+
+###
+
+### TURN 2: Player1 draws second card
+POST {{base_url}}/api/v1/games/{{game_id}}/draw
+Authorization: Bearer {{player1_token}}
+Content-Type: application/json
+
+###
+
+### TURN 2: Player1 stands
+POST {{base_url}}/api/v1/games/{{game_id}}/stand
+Authorization: Bearer {{player1_token}}
+Content-Type: application/json
+
+###
+
+### TURN 3: Player2 draws first card
+POST {{base_url}}/api/v1/games/{{game_id}}/draw
+Authorization: Bearer {{player2_token}}
+Content-Type: application/json
+
+###
+
+### TURN 3: Player2 draws second card
+POST {{base_url}}/api/v1/games/{{game_id}}/draw
+Authorization: Bearer {{player2_token}}
+Content-Type: application/json
+
+###
+
+### TURN 3: Player2 stands (TRIGGERS AUTO DEALER PLAY)
+POST {{base_url}}/api/v1/games/{{game_id}}/stand
+Authorization: Bearer {{player2_token}}
+Content-Type: application/json
+
+###
+
+### ============================================
+### STEP 6: Get Final Results
+### ============================================
+
+### Get Game State - Verify dealer played
+GET {{base_url}}/api/v1/games/{{game_id}}
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###
+
+### Get Game Results - Check detailed scoring
+# Expected response includes:
+# - player_results: HashMap with Won/Lost/Push/Busted for each player
+# - dealer_points: Dealer's final score
+# - dealer_busted: Whether dealer busted
+# - winner: Optional single winner
+# - tied_players: List if multiple winners
+GET {{base_url}}/api/v1/games/{{game_id}}/results
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###
+
+### ============================================
+### VALIDATION: Error Cases
+### ============================================
+
+### ERROR: Try to draw after game finished
+POST {{base_url}}/api/v1/games/{{game_id}}/draw
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###
+
+### ERROR: Try to stand after game finished
+POST {{base_url}}/api/v1/games/{{game_id}}/stand
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###
+
+### ERROR: Try to finish game manually after auto-finish
+POST {{base_url}}/api/v1/games/{{game_id}}/finish
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###
+
+### ============================================
+### SCENARIO 2: Player Busts
+### ============================================
+
+### Create Second Game
+# @name createGame2
+POST {{base_url}}/api/v1/games
+Content-Type: application/json
+
+{
+  "enrollment_timeout_seconds": 600
+}
+
+###
+
+### Enroll and Close (abbreviated for testing busts)
+# ... enrollment steps here ...
+
+###
+
+### Player draws multiple cards until bust
+# Keep drawing until points > 21
+POST {{base_url}}/api/v1/games/{{game_id}}/draw
+Authorization: Bearer {{player1_token}}
+Content-Type: application/json
+
+###
+
+### Check if player busted (state should show PlayerState::Busted)
+GET {{base_url}}/api/v1/games/{{game_id}}
+Authorization: Bearer {{player1_token}}
+Content-Type: application/json
+
+###
+
+### ============================================
+### SCENARIO 3: Dealer Busts (All Players Win)
+### ============================================
+
+### After all players stand with valid scores
+### Dealer auto-plays and may bust
+### Results should show all non-busted players as Won
+
+GET {{base_url}}/api/v1/games/{{game_id}}/results
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+# Expected: All players with outcome: Won if dealer busted
+
+###
+
+### ============================================
+### SCENARIO 4: Push (Tie with Dealer)
+### ============================================
+
+### If player has same points as dealer (e.g., both 19)
+### Result should show outcome: Push for that player
+
+GET {{base_url}}/api/v1/games/{{game_id}}/results
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+# Expected: player_results shows outcome: Push for tied player
+
+###
+
+### ============================================
+### SCENARIO 5: Multiple Players Tie (Same Winning Score)
+### ============================================
+
+### If multiple players beat dealer with same score
+### Results should show:
+# - winner: None
+# - tied_players: [player1, player2, ...]
+# - player_results: All show outcome: Won
+
+GET {{base_url}}/api/v1/games/{{game_id}}/results
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###

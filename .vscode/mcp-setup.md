@@ -18,6 +18,7 @@ This project uses Model Context Protocol (MCP) servers to enhance development wo
 - Create and review pull requests
 - Track issues for each phase
 - Integrate automated testing
+- Always use Git Docs Pattern's in git's comment (chore, feat, docs, test, build, refact, perform...)
 
 **Setup Required**:
 1. Create GitHub Personal Access Token at: https://github.com/settings/tokens

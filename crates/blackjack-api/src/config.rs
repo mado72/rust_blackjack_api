@@ -27,7 +27,7 @@ pub struct CorsConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct JwtConfig {
     /// Secret key used for signing and verifying JWT tokens
-    /// 
+    ///
     /// **Security Note**: This should be a strong, randomly generated secret
     /// in production and stored securely (e.g., via environment variables).
     pub secret: String,
@@ -41,7 +41,7 @@ pub struct JwtConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct RateLimitConfig {
     /// Maximum number of requests allowed per minute per player
-    /// 
+    ///
     /// Requests are tracked using a key format: `{game_id}:{email}`
     pub requests_per_minute: u32,
 }
@@ -52,7 +52,7 @@ pub struct RateLimitConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct ApiConfig {
     /// Number of months before an API version is sunset after deprecation
-    /// 
+    ///
     /// Used to calculate the X-API-Sunset-Date header value
     pub version_deprecation_months: u64,
 }
@@ -144,7 +144,7 @@ impl AppConfig {
         ];
 
         let mut builder = Config::builder();
-        
+
         // Try to find and load the config file
         for path in config_paths {
             if std::path::Path::new(path).exists() {

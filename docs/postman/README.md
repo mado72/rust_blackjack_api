@@ -11,6 +11,26 @@ This folder contains all necessary resources to test the Blackjack Multi-Player 
 
 See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for complete feature list.
 
+## 🔒 Security Notice (Milestone 8 - January 15, 2026)
+
+**Password Requirements:**  
+All user registrations now require strong passwords:
+- **Minimum 8 characters**
+- **Must contain**: uppercase letter, lowercase letter, digit, special character
+- **Examples**: `MyP@ssw0rd`, `Secure#Pass123`, `Test!User2024`
+
+**In Testing:**
+- ❌ Don't use: `password`, `pass123`, `SecurePass123!` (missing requirements)
+- ✅ Use: `TestP@ssw0rd`, `MyP@ssw0rd`, `Secure#Pass123`
+
+**Security Features:**
+- ✅ Argon2id password hashing (production-ready)
+- ✅ Email validation (RFC 5322)
+- ✅ Account status tracking
+- ✅ Role-based access control (Creator/Player roles)
+
+See [../SECURITY.md](../SECURITY.md) for complete security documentation.
+
 ## 📦 Available Files
 
 ### Postman Collections

@@ -197,6 +197,71 @@ docs/
 
 ---
 
+## Milestone 8 Security Features (IN PROGRESS)
+
+### ✅ Implemented Security (Jan 15, 2026)
+
+#### Password Hashing
+- **Algorithm**: Argon2id (OWASP recommended)
+- **Memory cost**: 19456 KiB (19 MiB)
+- **Time cost**: 2 iterations
+- **Random salt**: 16 bytes per hash
+- **Constant-time verification**: Timing attack protection
+
+#### Password Requirements
+All passwords must contain:
+- ✅ Minimum 8 characters
+- ✅ At least one uppercase letter (A-Z)
+- ✅ At least one lowercase letter (a-z)
+- ✅ At least one digit (0-9)
+- ✅ At least one special character (!@#$%^&*)
+
+**Valid examples:** `MyP@ssw0rd`, `Secure#Pass123`, `Test!User2024`
+
+#### User Account Features
+- ✅ Account status tracking (`is_active` field)
+- ✅ Last login timestamp (ISO 8601 format)
+- ✅ Secure password change endpoint (requires old password)
+- ✅ Email format validation (RFC 5322)
+
+#### Role-Based Access Control (RBAC)
+- ✅ **Creator** role - full game control (all permissions)
+- ✅ **Player** role - own actions only
+- ✅ **Spectator** role - planned for future (read-only)
+
+#### Game Permissions (Creator Only)
+- `InvitePlayers` - Invite other users
+- `KickPlayers` - Remove players from game
+- `CloseEnrollment` - Manually close enrollment
+- `FinishGame` - Manually finish game
+- `ModifySettings` - Change game settings
+
+#### New Error Codes
+
+| Code | Status | Meaning |
+|------|--------|---------||
+| `WEAK_PASSWORD` | 400 | Password doesn't meet complexity requirements |
+| `VALIDATION_ERROR` | 400 | Invalid email format or other validation failure |
+| `ACCOUNT_INACTIVE` | 403 | User account has been deactivated |
+| `INSUFFICIENT_PERMISSIONS` | 403 | User doesn't have required permission |
+| `NOT_A_PARTICIPANT` | 403 | User is not a participant in the game |
+| `CANNOT_KICK_CREATOR` | 403 | Cannot remove game creator |
+| `ACCOUNT_LOCKED` | 429 | Too many failed login attempts (future) |
+
+#### Security Improvements
+- ✅ No plaintext password storage
+- ✅ No passwords in logs
+- ✅ Generic error messages (no account enumeration)
+- ✅ Security event logging
+- ⏳ Security headers middleware (in progress)
+- ⏳ Account lockout after failed attempts (planned)
+- ⏳ Audit logging table (planned)
+
+### 📖 Security Documentation
+See [SECURITY.md](SECURITY.md) for complete security features and best practices.
+
+---
+
 ## Common Issues & Solutions
 
 | Issue | Solution |

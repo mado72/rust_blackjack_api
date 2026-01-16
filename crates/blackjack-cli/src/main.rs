@@ -1,6 +1,6 @@
-use std::io::{self, Write};
-use std::collections::HashMap;
 use rand::Rng;
+use std::collections::HashMap;
+use std::io::{self, Write};
 
 /// Constant array containing all the cards in the deck.
 /// Each card is represented by a tuple (name, value).
@@ -23,27 +23,29 @@ const CARDS: [(&str, u8); 13] = [
 ];
 
 /// Main function for the card game.
-/// 
+///
 /// Manages the complete game flow:
 /// 1. Requests the number of players
 /// 2. Validates that the number of players is between 1 and 10
 /// 3. Executes one round for each player
 /// 4. Determines and displays the winner
-/// 
+///
 /// # Panics
 /// Panics if the number of players is less than 1 or greater than 10.
 fn main() {
     println!("Welcome to the Card Game!");
-    
+
     let total_players = read_total_players();
 
-    assert!(total_players > 0, "The number of players must be greater than zero.");
+    assert!(
+        total_players > 0,
+        "The number of players must be greater than zero."
+    );
     assert!(total_players <= 10, "The maximum number of players is 10.");
 
     let mut players_points = vec![0u8; total_players as usize];
 
     for player_number in 1..=total_players {
-
         println!("\nPlayer {}'s turn:", player_number);
         let points = play_game_round();
 
@@ -56,13 +58,13 @@ fn main() {
 }
 
 /// Reads the total number of players from user input.
-/// 
+///
 /// # Returns
 /// Returns the number of players as u8.
-/// 
+///
 /// # Panics
 /// Panics if the input is not a valid number.
-/// 
+///
 /// # Note
 /// After calling this function, the main function validates that the returned value
 /// is between 1 and 10 (inclusive).
@@ -78,20 +80,20 @@ fn read_total_players() -> u8 {
 }
 
 /// Executes a complete game round for a player.
-/// 
+///
 /// The player can request cards repeatedly until:
 /// - They decide to stop
 /// - They exceed 21 points (bust)
-/// 
+///
 /// Drawn cards are removed from the deck (cannot be drawn again).
 /// If the player receives an Ace, they can choose whether it's worth 1 or 11 points.
-/// 
+///
 /// # Returns
 /// Returns the player's final score.
 fn play_game_round() -> u8 {
     // Creates a HashMap with all available cards
     let mut card_points_map: HashMap<String, u8> = HashMap::new();
-    
+
     for (name, value) in CARDS.iter() {
         card_points_map.insert(name.to_string(), *value);
     }
@@ -113,11 +115,14 @@ fn play_game_round() -> u8 {
         if let Some(value) = choosed {
             // Special logic for the Ace: allows choosing between 1 or 11 points
             if drawn_card == "A"
-                && prompt_decision("You have an Ace! Do you want it to count as 11 points instead of 1?") {
-                    points += 10; // Adds 10 extra points (1 + 10 = 11)
-                }
+                && prompt_decision(
+                    "You have an Ace! Do you want it to count as 11 points instead of 1?",
+                )
+            {
+                points += 10; // Adds 10 extra points (1 + 10 = 11)
+            }
             points += value;
-        }   
+        }
         println!("Your current points: {}", points);
 
         // Checks if the player exceeded 21 points (bust)
@@ -130,10 +135,10 @@ fn play_game_round() -> u8 {
 }
 
 /// Determines and displays the winner of the game.
-/// 
+///
 /// # Arguments
 /// * `players_points` - Vector containing the final score of each player.
-/// 
+///
 /// # Rules
 /// - The winner is the player with the highest score <= 21
 /// - Players with score > 21 are disqualified
@@ -160,9 +165,11 @@ fn determine_winner(players_points: Vec<u8>) {
     // Displays the game results
     println!("\n\n==========================\nGame Results:\n==========================");
     if draw_players.len() > 1 {
-        println!("It's a draw between players: {:?}", draw_players.iter().map(|i| i + 1).collect::<Vec<usize>>());
-    }
-    else if let Some(winner) = winner_index {
+        println!(
+            "It's a draw between players: {:?}",
+            draw_players.iter().map(|i| i + 1).collect::<Vec<usize>>()
+        );
+    } else if let Some(winner) = winner_index {
         println!("Player {} wins with {} points!", winner + 1, highest_points);
     } else {
         println!("No winner this time.");
@@ -170,10 +177,10 @@ fn determine_winner(players_points: Vec<u8>) {
 }
 
 /// Prompts the player for a yes/no decision.
-/// 
+///
 /// # Arguments
 /// * `prompt` - Message to be displayed to the player.
-/// 
+///
 /// # Returns
 /// Returns `true` if the response is "Y" (uppercase or lowercase) or empty (Enter).
 /// Returns `false` if the response is "N" or any other input.
@@ -195,7 +202,7 @@ mod tests {
     #[test]
     fn test_determine_winner_single_winner() {
         // Player 2 wins with 20 points
-        let players_points = vec![15, 20, 18];
+        let players_points = [15, 20, 18];
         // Manual test: verify that player 2 wins
         let mut winner_index: Option<usize> = None;
         let mut highest_points: u8 = 0;
@@ -214,7 +221,7 @@ mod tests {
     #[test]
     fn test_determine_winner_all_bust() {
         // All players exceed 21
-        let players_points = vec![22, 25, 23];
+        let players_points = [22, 25, 23];
         let mut winner_index: Option<usize> = None;
         let mut highest_points: u8 = 0;
 
@@ -231,7 +238,7 @@ mod tests {
     #[test]
     fn test_determine_winner_draw() {
         // Draw between players 1 and 3 with 19 points
-        let players_points = vec![19, 15, 19];
+        let players_points = [19, 15, 19];
         let mut highest_points: u8 = 0;
         let mut draw_players: Vec<usize> = Vec::new();
 
@@ -262,7 +269,7 @@ mod tests {
     #[test]
     fn test_determine_winner_perfect_21() {
         // Player 2 wins with exactly 21 points
-        let players_points = vec![20, 21, 19];
+        let players_points = [20, 21, 19];
         let mut winner_index: Option<usize> = None;
         let mut highest_points: u8 = 0;
 
@@ -315,7 +322,7 @@ mod tests {
     #[test]
     fn test_determine_winner_with_one_player() {
         // A single player with a valid score
-        let players_points = vec![18];
+        let players_points = [18];
         let mut winner_index: Option<usize> = None;
         let mut highest_points: u8 = 0;
 
@@ -333,7 +340,7 @@ mod tests {
     #[test]
     fn test_determine_winner_mixed_bust_and_valid() {
         // Some players exceed 21, others don't
-        let players_points = vec![22, 18, 25, 19];
+        let players_points = [22, 18, 25, 19];
         let mut winner_index: Option<usize> = None;
         let mut highest_points: u8 = 0;
 
@@ -353,7 +360,10 @@ mod tests {
     fn test_total_players_zero_panics() {
         // Test that 0 players causes a panic
         let total_players: u8 = 0;
-        assert!(total_players > 0, "The number of players must be greater than zero.");
+        assert!(
+            total_players > 0,
+            "The number of players must be greater than zero."
+        );
     }
 
     #[test]
@@ -368,7 +378,10 @@ mod tests {
     fn test_total_players_valid_range() {
         // Test that valid player counts (1-10) don't panic
         for total_players in 1..=10 {
-            assert!(total_players > 0, "The number of players must be greater than zero.");
+            assert!(
+                total_players > 0,
+                "The number of players must be greater than zero."
+            );
             assert!(total_players <= 10, "The maximum number of players is 10.");
         }
     }

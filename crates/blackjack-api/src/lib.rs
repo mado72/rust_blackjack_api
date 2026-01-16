@@ -36,8 +36,8 @@
 //!     let config = Arc::new(AppConfig::from_file().expect("Failed to load config"));
 //!     
 //!     // Create services
-//!     let game_service = Arc::new(GameService::new(ServiceConfig::from_env()));
 //!     let user_service = Arc::new(UserService::new());
+//!     let game_service = Arc::new(GameService::new(ServiceConfig::from_env(), user_service.clone()));
 //!     let invitation_service = Arc::new(InvitationService::new(InvitationConfig::default()));
 //!     let rate_limiter = RateLimiter::new(config.rate_limit.requests_per_minute);
 //!     
@@ -109,9 +109,9 @@ pub mod middleware;
 pub mod rate_limiter;
 pub mod websocket;
 
+use blackjack_service::{GameService, InvitationService, UserService};
 use config::AppConfig;
 use rate_limiter::RateLimiter;
-use blackjack_service::{GameService, UserService, InvitationService};
 use std::sync::Arc;
 
 /// Shared application state
@@ -161,25 +161,25 @@ pub struct AppState {
     /// Provides methods for creating games, drawing cards, changing Ace values,
     /// and retrieving game state. Thread-safe for concurrent access.
     pub game_service: Arc<GameService>,
-    
+
     /// User service for managing user accounts
     ///
     /// Provides methods for user registration, login, and authentication.
     /// Thread-safe for concurrent access.
     pub user_service: Arc<UserService>,
-    
+
     /// Invitation service for managing game invitations
     ///
     /// Provides methods for creating, accepting, and declining game invitations.
     /// Thread-safe for concurrent access.
     pub invitation_service: Arc<InvitationService>,
-    
+
     /// Application configuration
     ///
     /// Contains all runtime configuration including server settings, JWT secrets,
     /// CORS origins, rate limits, and API versioning policies.
     pub config: Arc<AppConfig>,
-    
+
     /// Rate limiter for request throttling
     ///
     /// Enforces per-user request limits using a sliding window algorithm.

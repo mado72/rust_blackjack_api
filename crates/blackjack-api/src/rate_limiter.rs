@@ -37,11 +37,11 @@ use std::time::Instant;
 #[derive(Clone)]
 pub struct RateLimiter {
     /// Stores request timestamps for each unique key
-    /// 
+    ///
     /// Key format: `{game_id}:{email}`
     /// Value: Queue of request timestamps (oldest first)
     requests: Arc<Mutex<HashMap<String, VecDeque<Instant>>>>,
-    
+
     /// Maximum number of requests allowed per minute per key
     requests_per_minute: u32,
 }
