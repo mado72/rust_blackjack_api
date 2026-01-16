@@ -1333,10 +1333,336 @@ curl http://localhost:8080/health
 
 ---
 
+## Milestone 9: WebSocket Real-time Updates
+
+**Status:** `planned`  
+**Dependencies:** Milestones 1-8  
+**Estimated Effort:** 12-15 hours
+
+### Overview
+
+Implement WebSocket connections to enable real-time game updates, allowing players to receive instant notifications about game state changes, other players' actions, and turn transitions without polling.
+
+### Tasks
+
+#### 9.1 WebSocket Infrastructure (4-5 hours)
+
+- [ ] Upgrade WebSocket handler from blueprint to full implementation
+- [ ] Implement connection lifecycle management (connect, authenticate, disconnect)
+- [ ] Create connection pool/registry to track active client connections
+- [ ] Implement heartbeat/ping-pong mechanism to detect dead connections
+- [ ] Add connection state management (authenticated, subscribed to game)
+- [ ] Handle graceful shutdown and connection cleanup
+
+#### 9.2 Game Event System (3-4 hours)
+
+- [ ] Design event types: GameStateChanged, PlayerJoined, PlayerLeft, TurnChanged, CardDrawn, GameFinished, etc.
+- [ ] Create event serialization format (JSON with event type discrimination)
+- [ ] Implement event broadcasting logic:
+  - [ ] Broadcast to all players in a specific game
+  - [ ] Broadcast to specific player (direct message)
+  - [ ] Broadcast to all spectators
+- [ ] Add event queuing for offline players (optional persistence)
+
+#### 9.3 Game State Synchronization (3-4 hours)
+
+- [ ] Integrate WebSocket broadcasts into game service layer:
+  - [ ] Trigger events on `draw_card()`
+  - [ ] Trigger events on `stand()`
+  - [ ] Trigger events on `set_ace_value()`
+  - [ ] Trigger events on `finish_game()`
+  - [ ] Trigger events on invitation accept/decline
+- [ ] Implement state snapshot delivery on connection (current game state)
+- [ ] Add filtering logic (hide other players' cards, show only public info)
+- [ ] Implement spectator mode (read-only game observation)
+
+#### 9.4 Security and Performance (2-3 hours)
+
+- [ ] Implement WebSocket authentication via JWT token in connection handshake
+- [ ] Add rate limiting for WebSocket messages
+- [ ] Implement connection limits per user/game
+- [ ] Add metrics for active connections, message throughput
+- [ ] Implement connection timeout and auto-disconnect
+- [ ] Add comprehensive logging for WebSocket events
+
+### Acceptance Criteria
+
+- ✅ Players receive real-time notifications when it's their turn
+- ✅ All game state changes broadcast to connected players instantly
+- ✅ WebSocket connections require valid JWT authentication
+- ✅ Connections automatically clean up on disconnect or timeout
+- ✅ No sensitive data (other players' cards) exposed via WebSocket
+- ✅ System handles 50+ concurrent WebSocket connections efficiently
+- ✅ Integration tests verify event delivery for all game actions
+- ✅ Documentation includes WebSocket API specification and event schemas
+
+### Technical Notes
+
+**Technologies:**
+- `axum::extract::ws` for WebSocket support
+- `tokio::sync::mpsc` for event channels
+- `dashmap::DashMap` for thread-safe connection registry
+
+**Testing Strategy:**
+- Unit tests for event serialization/deserialization
+- Integration tests simulating multi-player game with WebSocket clients
+- Load tests for concurrent connections
+
+---
+
+## Milestone 10: Monitoring & Observability
+
+**Status:** `planned`  
+**Dependencies:** Milestones 1-8  
+**Estimated Effort:** 10-12 hours
+
+### Overview
+
+Implement comprehensive monitoring and observability to track system health, performance metrics, and operational insights for production environments.
+
+### Tasks
+
+#### 10.1 Metrics Collection (4-5 hours)
+
+- [ ] Add `metrics` and `metrics-exporter-prometheus` dependencies
+- [ ] Implement application metrics:
+  - [ ] HTTP request duration histogram (by endpoint, status code)
+  - [ ] Active games counter
+  - [ ] Active players gauge
+  - [ ] WebSocket connections gauge
+  - [ ] Card draws counter
+  - [ ] Game completions counter
+  - [ ] Authentication attempts (success/failure)
+  - [ ] Rate limit violations counter
+- [ ] Add business metrics:
+  - [ ] Average game duration
+  - [ ] Player enrollment/invitation metrics
+  - [ ] Turn completion time
+  - [ ] Dealer auto-play frequency
+- [ ] Expose `/metrics` endpoint for Prometheus scraping
+
+#### 10.2 Distributed Tracing (3-4 hours)
+
+- [ ] Integrate OpenTelemetry for distributed tracing
+- [ ] Add trace context propagation across service boundaries
+- [ ] Implement span creation for key operations:
+  - [ ] HTTP request handling
+  - [ ] Game state mutations
+  - [ ] Database operations (future)
+  - [ ] WebSocket events
+- [ ] Configure trace sampling and export to OTLP collector
+- [ ] Add trace IDs to structured logs for correlation
+
+#### 10.3 Enhanced Logging (2-3 hours)
+
+- [ ] Implement structured logging with JSON output (for production)
+- [ ] Add contextual fields to logs:
+  - [ ] Request ID, User ID, Game ID
+  - [ ] HTTP method, path, status code
+  - [ ] Latency, error details
+- [ ] Configure log levels per module (via environment variables)
+- [ ] Add error aggregation and deduplication
+- [ ] Implement log rotation and retention policies
+
+#### 10.4 Alerting and Dashboards (1-2 hours)
+
+- [ ] Create Grafana dashboard templates:
+  - [ ] System health dashboard (CPU, memory, request rate)
+  - [ ] Application metrics dashboard (games, players, errors)
+  - [ ] Business metrics dashboard (enrollment, invitations)
+- [ ] Define alerting rules for Prometheus AlertManager:
+  - [ ] High error rate (>5% of requests)
+  - [ ] High latency (p99 > 2 seconds)
+  - [ ] Service unavailability
+  - [ ] WebSocket connection failures
+- [ ] Document deployment instructions for monitoring stack
+
+### Acceptance Criteria
+
+- ✅ Prometheus scrapes `/metrics` endpoint successfully
+- ✅ All HTTP requests recorded with duration, status code, endpoint labels
+- ✅ Business metrics accurately track game lifecycle events
+- ✅ Distributed traces visible in Jaeger/Tempo UI
+- ✅ Logs include trace IDs and structured context
+- ✅ Grafana dashboards visualize key metrics
+- ✅ Alerting rules trigger on defined thresholds
+- ✅ Documentation includes setup guide for monitoring stack
+- ✅ Zero performance degradation from observability overhead (<1% latency increase)
+
+### Technical Notes
+
+**Technologies:**
+- `metrics` + `metrics-exporter-prometheus` for metrics collection
+- `opentelemetry` + `tracing-opentelemetry` for distributed tracing
+- Prometheus for metrics storage and alerting
+- Grafana for visualization
+- Jaeger or Tempo for trace visualization
+
+**Deployment:**
+```yaml
+# docker-compose.yml addition
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+  
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+```
+
+**Testing Strategy:**
+- Verify metrics endpoint returns valid Prometheus format
+- Load testing to validate performance impact
+- Integration tests for trace context propagation
+
+---
+
+## Future Features
+
+This section captures additional enhancement opportunities for future consideration. These features are not scheduled for immediate implementation but represent valuable improvements identified during development.
+
+### 1. Production Deployment Infrastructure
+
+**Estimated Effort:** 8-10 hours
+
+**Description:**  
+Establish production-grade deployment infrastructure with automated CI/CD, environment management, and operational tooling.
+
+**Key Components:**
+- Multi-environment configuration (dev, staging, production)
+- Kubernetes deployment manifests with Helm charts
+- Automated deployment pipeline (GitHub Actions, GitLab CI, or ArgoCD)
+- Infrastructure as Code (Terraform or Pulumi)
+- Secret management (HashiCorp Vault, AWS Secrets Manager)
+- Blue-green or canary deployment strategy
+- Automated rollback procedures
+- Production runbook and incident response procedures
+
+**Benefits:**
+- Reduced deployment risk and downtime
+- Consistent environments across dev, staging, production
+- Faster time-to-market for new features
+- Improved disaster recovery capabilities
+
+---
+
+### 2. Database Integration (PostgreSQL/MySQL)
+
+**Estimated Effort:** 15-20 hours
+
+**Description:**  
+Replace in-memory game state with persistent database storage, enabling multi-instance scalability, game persistence, and historical data analysis.
+
+**Key Components:**
+- Database schema design (users, games, players, cards, invitations)
+- SQLx integration with async query execution
+- Connection pooling and query optimization
+- Database migration system (already scaffolded in migrations/)
+- Transaction management for game state consistency
+- Read replicas for query scaling (optional)
+- Backup and restore procedures
+- Historical game data retention and analytics
+
+**Benefits:**
+- Survive server restarts without losing game state
+- Horizontal scaling with multiple API instances
+- Historical game analysis and statistics
+- Audit trail for debugging and compliance
+
+**Implementation Notes:**
+- Migration files already exist: `migrations/20250101000000_initial_schema.sql`
+- Uncomment SQLx dependency in `Cargo.toml`
+- Implement repository pattern in service layer
+- Add database health checks
+
+---
+
+### 3. Additional Game Features
+
+**Estimated Effort:** 10-15 hours
+
+**Description:**  
+Enhance gameplay with advanced blackjack rules, betting mechanics, and social features.
+
+**Potential Features:**
+- **Betting System:**
+  - Virtual currency/chips for wagering
+  - Configurable minimum/maximum bets per game
+  - Player chip balances and transaction history
+  
+- **Advanced Blackjack Rules:**
+  - Split pairs (deal two hands from matching cards)
+  - Double down (double bet after initial deal)
+  - Insurance (side bet when dealer shows Ace)
+  - Surrender (forfeit half bet to exit early)
+  
+- **Social Features:**
+  - Player profiles with statistics (win rate, games played)
+  - Leaderboards (chips won, games won, win streaks)
+  - Friend system (add/remove friends, invite friends only)
+  - Chat/messaging during games
+  
+- **Game Customization:**
+  - Configurable game rules (deck count, dealer stand threshold)
+  - Private games with passwords
+  - Tournament mode with bracket progression
+
+**Benefits:**
+- Increased player engagement and retention
+- More realistic blackjack simulation
+- Community building through social features
+
+---
+
+### 4. Documentation & API Specification Enhancements
+
+**Estimated Effort:** 6-8 hours
+
+**Description:**  
+Expand documentation to include comprehensive API specification, developer guides, and interactive tools.
+
+**Key Components:**
+- **OpenAPI/Swagger Integration:**
+  - Generate OpenAPI 3.0 specification from code
+  - Interactive API documentation via Swagger UI
+  - Hosted at `/api/docs` endpoint
+  
+- **Developer Guides:**
+  - Getting started tutorial (from zero to first game)
+  - Architecture decision records (ADRs)
+  - Contributing guide (code style, PR process)
+  - API versioning strategy documentation
+  
+- **Client SDK Generation:**
+  - TypeScript SDK for frontend integration
+  - Python SDK for scripting and automation
+  - Rust SDK for Rust-based clients
+  
+- **Enhanced Postman Collection:**
+  - Environment variables for all deployment types
+  - Automated tests for CI integration
+  - Collection-level documentation with examples
+
+**Benefits:**
+- Faster onboarding for new developers
+- Reduced API integration errors
+- Self-service API exploration
+- Improved collaboration between teams
+
+---
+
 ## Version History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.6.0 | 2026-01-16 | Team | Added Milestone 9 (WebSocket Real-time Updates) and Milestone 10 (Monitoring & Observability) for future implementation. Created Future Features section documenting additional enhancement opportunities. |
 | 1.5.0 | 2026-01-15 | Team | Completed Milestone 8: Security hardening with Argon2id password hashing, RBAC, security headers, and comprehensive testing. All milestones (1-8) complete - Production ready! |
 | 1.4.2 | 2026-01-15 | Team | Updated M7 documentation: All acceptance criteria met, all endpoints functional, 167 tests passing |
 | 1.4.1 | 2026-01-15 | Team | Added API testing results, deployment guide, Step 1 completion (API Testing & Validation) |
