@@ -7,3 +7,6 @@
 
 # MCP settings with tokens (if customized)
 .vscode/mcp-settings.json
+
+# Temporary documentation files
+.tmp-docs
