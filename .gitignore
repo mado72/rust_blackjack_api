@@ -1,4 +1,4 @@
-/target
+*/target
 
 # Environment files with secrets
 .env
