@@ -570,20 +570,9 @@ Implement a game lobby system where authenticated users create games with a glob
     - Response: `{game_id, message, turn_order, player_count}`
     - Error Handling: NotGameCreator (403)
     - [x] Handler written ✅
-    - ⏳ Router not configured ❌
+    - [x] Router configured ✅
+    - [x] End-to-end tested ✅
     - Response: array of `GameInfo` with game_id, creator_id, enrolled_count, max_players (10), enrollment_timeout_seconds, time_remaining_seconds
-  - ⏳ `POST /api/v1/games/:game_id/enroll` - Enroll player in game
-    - [x] Handler written ✅
-    - ⏳ Router not configured ❌
-    - Request: `{player_email}`
-    - Validates: game open, capacity < 10, not already enrolled
-    - Returns 400 `GameFull` if at capacity, 410 `EnrollmentClosed` if expired
-    - Response: `{message}`
-  - ⏳ `POST /api/v1/games/:game_id/close-enrollment` - Close enrollment
-    - [x] Handler written ✅
-    - ⏳ Router not configured ❌
-    - Only game creator can close
-    - Response: `{turn_order: Vec<String>}`
 
 - [x] **Game Invitations Endpoints (PHASE 2A Complete)**
   - [x] `POST /api/v1/games/:game_id/invitations` - Send invitation

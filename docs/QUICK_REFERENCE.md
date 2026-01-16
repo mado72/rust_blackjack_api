@@ -1,17 +1,18 @@
-# Quick Reference - Milestone 7 PHASE 1
+# Quick Reference - Milestones 7 & 8
 
-**Last Updated:** January 10, 2026  
-**Status:** ✅ PHASE 1 COMPLETE
+**Last Updated:** January 16, 2026  
+**Status:** ✅ M7 COMPLETE | ✅ M8 COMPLETE
 
 ## Current Implementation Status
 
-| Component | Status | Lines | Tests | 
-|-----------|--------|-------|-------|
-| Core Layer | ✅ Complete | N/A | 19 passing |
-| Service Layer | ✅ Complete | N/A | 12 passing |
-| API Enrollment Endpoints | ✅ Complete | 346 | 16 passing |
-| Turn-Based Gameplay | ⏳ Pending | — | — |
-| **TOTAL** | **78/78 PASSING** | **346 new** | **78 tests** |
+| Component | Status | Tests | 
+|-----------|--------|-------|
+| Core Layer | ✅ Complete | 77 passing (17 unit + 60 integration) |
+| Service Layer | ✅ Complete | 24 passing |
+| API Layer | ✅ Complete | 22 passing |
+| CLI Layer | ✅ Complete | 13 passing |
+| Security (M8) | ✅ Complete | Full coverage |
+| **TOTAL** | **✅ M7+M8 COMPLETE** | **167 tests passing** |
 
 ---
 
@@ -185,7 +186,7 @@ docs/
 ## Success Metrics
 
 ✅ All 4 endpoints wired and functional  
-✅ 78/78 tests passing (was 82, now 78 after cleanup)  
+✅ 167/167 tests passing | M7 & M8 Complete  
 ✅ Zero compilation warnings  
 ✅ Zero clippy warnings  
 ✅ Release build successful  

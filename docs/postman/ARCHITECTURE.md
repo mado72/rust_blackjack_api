@@ -1,8 +1,8 @@
 # Blackjack API Architecture
 
-**Status:** ✅ **FULLY IMPLEMENTED + ENHANCED SCORING**  
-**Last Updated:** January 15, 2026  
-**Tests:** 106 passing (60 integration tests in core)
+**Status:** ✅ **M7 & M8 COMPLETE - PRODUCTION READY**  
+**Last Updated:** January 16, 2026  
+**Tests:** 167 passing (77 core + 24 service + 22 API + 13 CLI + others)
 
 ## Overview
 
@@ -10,6 +10,9 @@ The Blackjack API is a turn-based multiplayer REST API built with Rust/Axum. It 
 
 **Key Features:**
 - 🔐 User registration and JWT authentication
+- � **Argon2id password hashing** with OWASP parameters (M8)
+- 🛡️ **Role-Based Access Control** (Creator/Player/Spectator) (M8)
+- 🔑 **Security headers** (CSP, HSTS, X-Frame-Options) (M8)
 - 📨 Game invitation system with configurable timeouts
 - 🎮 Turn-based card drawing with validation
 - 🎲 **Automatic dealer play** when all players finish
@@ -17,6 +20,7 @@ The Blackjack API is a turn-based multiplayer REST API built with Rust/Axum. It 
 - 🏆 Player state management (Active/Standing/Busted)
 - ⚡ Automatic game completion
 - 🎯 Real-time game state tracking
+- 👥 **Game management** (kick players, view participants) (M8)
 
 ## Architecture Layers
 
@@ -25,8 +29,11 @@ The Blackjack API is a turn-based multiplayer REST API built with Rust/Axum. It 
 The core layer contains all business logic and domain models:
 
 **User Management:**
-- `User` struct with email and password_hash
-- Placeholder password hashing (to be enhanced with Argon2)
+- `User` struct with email, password_hash, is_active, last_login (M8)
+- Argon2id password hashing with OWASP parameters (M8)
+- Email validation (RFC 5322) and password complexity validation (M8)
+- Account activation/deactivation (M8)
+- Login tracking (M8)
 
 **Invitation System:**
 - `GameInvitation` struct with timeout support
@@ -239,7 +246,7 @@ Results include:
 - API layer: 20 tests
 - CLI: 13 tests
 
-**Total: 106 tests passing** ✅
+**Total: 167 tests passing** ✅
 
 **Test Coverage:**
 - ✅ Dealer automatic play (11 tests)
@@ -260,7 +267,7 @@ cargo test --workspace
 - API layer: 16 tests
 - CLI: 13 tests
 
-**Total: 60 tests passing** ✅
+**Total: 77 core tests passing** ✅ (17 unit + 60 integration)
 
 ### Manual Testing
 - Postman collection: `Blackjack_API.postman_collection.json`

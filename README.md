@@ -1,24 +1,26 @@
 # Blackjack Multi-Player Backend System
 
-A production-ready REST API backend for multi-player Blackjack card games, built with Rust using Axum, with JWT authentication, rate limiting, structured logging, and comprehensive observability.
+A production-ready REST API backend for multi-player Blackjack card games, built with Rust using Axum, featuring JWT authentication, Argon2id password hashing, role-based access control, rate limiting, structured logging, and comprehensive security hardening.
 
 ## Overview
 
 This project provides a complete backend system for managing multi-player Blackjack games (1-10 players per game) with:
 
-- **RESTful API**: Versioned endpoints under `/api/v1` with OpenAPI-style documentation
+- **RESTful API**: Versioned endpoints under `/api/v1` with comprehensive documentation
 - **JWT Authentication**: Secure player authentication per game session
-- **Security Hardening (M8)**: Argon2id password hashing, RBAC, security headers
-- **User Management**: User registration, login, persistent accounts, password changes
+- **Security Hardening (M8)**: Argon2id password hashing (OWASP parameters), RBAC, security headers
+- **User Management (M7-M8)**: User registration, login, password changes, account activation/deactivation
 - **Access Control (M8)**: Role-based permissions (Creator, Player, Spectator)
-- **Turn-Based Gameplay**: Ordered turns, automatic advancement, smart turn skipping
-- **Game Invitations**: Invite system with configurable timeouts and status tracking
+- **Game Management (M8)**: Kick players, view participants with roles
+- **Turn-Based Gameplay (M7)**: Ordered turns, automatic advancement, smart turn skipping
+- **Game Invitations (M7)**: Invite system with configurable timeouts and status tracking
 - **Rate Limiting**: Per-user request throttling using sliding window algorithm
 - **Real-time Ready**: WebSocket blueprint for future real-time notifications
-- **Observability**: Structured logging with tracing, health checks, and metrics-ready architecture
-- **Production-Grade**: External configuration, CORS support, graceful error handling, security headers
+- **Observability**: Structured logging with tracing, health checks, metrics-ready
+- **Production-Grade**: External configuration, CORS support, graceful error handling
 - **Multi-player Support**: 1-10 players per game with independent state management
 - **Flexible Gameplay**: Dynamic Ace values (1 or 11), ordered card history, bust detection
+- **Comprehensive Testing**: 167 tests passing (unit, integration, API, service)
 
 ## Game Rules
 
@@ -414,7 +416,35 @@ Login with existing user credentials. (Milestone 7)
 - `403` - Account inactive (account has been deactivated)
 - `404` - User not found
 
+#### POST /api/v1/auth/change-password
 
+Change user password. **Requires authentication.** (Milestone 8)
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request:**
+```json
+{
+  "old_password": "OldSecure#Pass123",
+  "new_password": "NewSecure#Pass456"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Password changed successfully"
+}
+```
+
+**Errors:**
+- `401` - Unauthorized (missing or invalid token)
+- `401` - Invalid old password
+- `400` - New password doesn't meet complexity requirements
+- `404` - User not found
 
 ### Game Management
 
@@ -538,6 +568,70 @@ Authorization: Bearer <jwt_token>
 **Errors:**
 - `401` - Unauthorized
 - `403` - Only game creator can close enrollment
+- `404` - Game not found
+
+#### DELETE /api/v1/games/:game_id/players/:player_id
+
+Kick a player from the game. **Only creator can kick players.** (Milestone 8)
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Path Parameters:**
+- `game_id` - The game UUID
+- `player_id` - The player's user UUID to kick
+
+**Response (200 OK):**
+```json
+{
+  "game_id": "550e8400-e29b-41d4-a716-446655440000",
+  "player_id": "player-uuid",
+  "player_email": "player2@example.com",
+  "message": "Player player2@example.com kicked successfully"
+}
+```
+
+**Errors:**
+- `401` - Unauthorized
+- `403` - Only game creator can kick players
+- `403` - Cannot kick the game creator
+- `404` - Game not found
+- `404` - Player not found in game
+- `409` - Can only kick players during enrollment phase
+
+#### GET /api/v1/games/:game_id/participants
+
+Get all participants in a game. **Requires authentication.** (Milestone 8)
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response (200 OK):**
+```json
+{
+  "game_id": "550e8400-e29b-41d4-a716-446655440000",
+  "participants": [
+    {
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "email": "creator@example.com",
+      "role": "Creator"
+    },
+    {
+      "user_id": "660e8400-e29b-41d4-a716-446655440001",
+      "email": "player1@example.com",
+      "role": "Player"
+    }
+  ],
+  "count": 2
+}
+```
+
+**Errors:**
+- `401` - Unauthorized
 - `404` - Game not found
 
 ### Game Invitations (Milestone 7)
@@ -961,9 +1055,9 @@ curl -s "http://localhost:8080/api/v1/games/$GAME_ID/results" \
 
 ## Milestone 7: Turn-Based Gameplay and User Management
 
-**Status**: Core & Service Complete ✅ | API Enrollment Endpoints Complete ✅ | Turn-Based Gameplay Pending ⏳
+**Status**: ✅ COMPLETE (January 14, 2026)
 
-The M7 implementation introduces turn-based multiplayer gameplay with user management and game invitations. This milestone adds sophisticated game flow control while maintaining backward compatibility with existing endpoints.
+The M7 implementation introduces turn-based multiplayer gameplay with user management and game invitations.
 
 ### Phase 1: Enrollment Endpoints - COMPLETE ✅
 
@@ -973,19 +1067,59 @@ The M7 implementation introduces turn-based multiplayer gameplay with user manag
 - ✅ `POST /api/v1/games/:game_id/enroll` - Enroll player in game
 - ✅ `POST /api/v1/games/:game_id/close-enrollment` - Close enrollment and initialize turns
 
-All 4 endpoints are:
-- ✅ Fully implemented with comprehensive error handling
-- ✅ Integrated with JWT authentication
-- ✅ Wired to router in main.rs
-- ✅ End-to-end tested (78/78 tests passing)
-- ✅ Documented with examples
+### Phase 2: Invitation & Gameplay Endpoints - COMPLETE ✅
 
-**Key Features:**
-- **Game Creation**: Users create games with global enrollment timeout (default 300s)
-- **Open Games Discovery**: Authenticated users can view all games in enrollment phase
-- **Player Enrollment**: Add players during enrollment window with capacity validation (max 10)
-- **Enrollment Closure**: Creator manually closes enrollment to start turn-based play
-- **Turn Order Initialization**: Turn order randomized when enrollment closes
+**Completed (Jan 14, 2026):**
+- ✅ `POST /api/v1/games/:game_id/invitations` - Send game invitations
+- ✅ `GET /api/v1/invitations/pending` - List pending invitations
+- ✅ `POST /api/v1/invitations/:id/accept` - Accept invitation
+- ✅ `POST /api/v1/invitations/:id/decline` - Decline invitation
+- ✅ `POST /api/v1/games/:game_id/stand` - Stand and advance turn
+
+### Phase 3: Turn Management & State - COMPLETE ✅
+
+**Completed (Jan 14, 2026):**
+- ✅ Turn order system with automatic advancement
+- ✅ Player state tracking (standing, busted, active)
+- ✅ Smart turn skipping for inactive players
+- ✅ Auto-finish when all players complete turns
+
+## Milestone 8: Security Hardening and Enhanced User Management
+
+**Status**: ✅ COMPLETE (January 15, 2026)
+
+The M8 implementation adds enterprise-grade security features and enhanced user management capabilities.
+
+### Security Features - COMPLETE ✅
+
+**Completed (Jan 15, 2026):**
+- ✅ Argon2id password hashing (OWASP parameters: 19 MiB memory, 2 iterations)
+- ✅ Password complexity validation (8+ chars, uppercase, lowercase, digit, special)
+- ✅ Email validation (RFC 5322 compliant)
+- ✅ Constant-time password verification (timing attack protection)
+- ✅ Security headers middleware (CSP, HSTS, X-Frame-Options, X-Content-Type-Options)
+
+### Access Control - COMPLETE ✅
+
+**Completed (Jan 15, 2026):**
+- ✅ Role-Based Access Control (RBAC) with GameRole enum
+- ✅ GamePermission system (5 permissions)
+- ✅ Permission checking at service layer
+- ✅ Participant tracking with roles (Creator, Player, Spectator)
+
+### User Account Management - COMPLETE ✅
+
+**Completed (Jan 15, 2026):**
+- ✅ `POST /api/v1/auth/change-password` - Change user password
+- ✅ Account activation/deactivation
+- ✅ Login tracking (last_login timestamp)
+- ✅ Enhanced User model with security fields
+
+### Game Management - COMPLETE ✅
+
+**Completed (Jan 15, 2026):**
+- ✅ `DELETE /api/v1/games/:game_id/players/:player_id` - Kick player (creator only)
+- ✅ `GET /api/v1/games/:game_id/participants` - List game participants with roles
 
 ### Key Features
 
@@ -1582,18 +1716,27 @@ See [PRD.md](docs/PRD.md) for the complete implementation plan:
 5. ✅ **Milestone 5**: REST Endpoints & Health Checks
 6. ✅ **Milestone 6**: Tests, Documentation & Docker
 
-**In Progress:**
-7. 🚧 **Milestone 7**: Turn-Based Gameplay and User Management
-   - ✅ Phase 1: Game Enrollment Endpoints (COMPLETE - Jan 10, 2026)
-   - ⏳ Phase 2A: Game Invitation Endpoints (Planned - 2h)
-   - ⏳ Phase 2B: Stand Endpoint (Planned - 1h)
-   - ⏳ Phase 3: PlayerState & Turn Management (Planned - 3h)
-   - ⏳ Phase 4: Additional Tests (Planned - 8h)
+**Completed Milestones (continued):**
+7. ✅ **Milestone 7**: Turn-Based Gameplay and User Management (COMPLETE - Jan 14, 2026)
+   - ✅ Phase 1: Game Enrollment Endpoints
+   - ✅ Phase 2A: Game Invitation Endpoints
+   - ✅ Phase 2B: Stand Endpoint
+   - ✅ Phase 3: PlayerState & Turn Management
+   - ✅ Phase 4: Additional Tests
+8. ✅ **Milestone 8**: Security Hardening and Enhanced User Management (COMPLETE - Jan 15, 2026)
+   - ✅ Argon2id Password Hashing
+   - ✅ Password Complexity Validation
+   - ✅ Role-Based Access Control (RBAC)
+   - ✅ Security Headers (CSP, HSTS, X-Frame-Options)
+   - ✅ Account Management (activation, deactivation, login tracking)
+   - ✅ Password Change Endpoint
+   - ✅ Kick Player Endpoint
+   - ✅ Get Participants Endpoint
 
 **Planned:**
-8. ⏳ **Milestone 8**: User Account Management and Authentication
+9. ⏳ **Milestone 9**: SQLite Persistence and Database Layer
 
-**Status**: 78/78 tests passing | 346 lines of new handler code | All endpoints functional
+**Status**: 167/167 tests passing | All features complete through M8 | Production-ready API
 
 ## Contributing
 
