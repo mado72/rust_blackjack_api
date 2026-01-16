@@ -365,3 +365,28 @@ Authorization: Bearer {{creator_token}}
 Content-Type: application/json
 
 ###
+
+### ============================================
+### LOGOUT - Cleanup
+### ============================================
+
+### Logout Creator
+POST {{base_url}}/api/v1/auth/logout
+Authorization: Bearer {{creator_token}}
+Content-Type: application/json
+
+###
+
+### Logout Player 1
+POST {{base_url}}/api/v1/auth/logout
+Authorization: Bearer {{player1_token}}
+Content-Type: application/json
+
+###
+
+### Logout Player 2
+POST {{base_url}}/api/v1/auth/logout
+Authorization: Bearer {{player2_token}}
+Content-Type: application/json
+
+###

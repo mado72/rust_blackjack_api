@@ -102,6 +102,12 @@ POST /api/v1/auth/login
 }
 ```
 
+### Logout
+```
+POST /api/v1/auth/logout
+Authorization: Bearer {{jwt_token}}
+```
+
 ### Comprar Carta
 ```
 POST /api/v1/games/{{game_id}}/draw

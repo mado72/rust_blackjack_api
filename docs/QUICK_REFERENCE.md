@@ -18,6 +18,13 @@
 
 ## Implemented Endpoints
 
+### Authentication (M7/M8)
+| Endpoint | Method | Status | Auth | Response |
+|----------|--------|--------|------|----------|
+| `/api/v1/auth/register` | POST | ✅ | No | `{user_id, email, message}` |
+| `/api/v1/auth/login` | POST | ✅ | No | `{token, expires_in}` |
+| `/api/v1/auth/logout` | POST | ✅ | Required | `{message}` |
+
 ### Game Management
 | Endpoint | Method | Status | Auth | Response |
 |----------|--------|--------|------|----------|
@@ -87,6 +94,26 @@ cargo clippy -- -D warnings
 ---
 
 ## Curl Examples
+
+### Register User
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "player@example.com", "password": "SecurePassword123!"}'
+```
+
+### Login
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "player@example.com", "password": "SecurePassword123!"}'
+```
+
+### Logout
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/logout \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
 
 ### Create Game
 ```bash

@@ -60,6 +60,11 @@ Content-Type: application/json
 ### Salvar token da resposta acima
 # @jwt_token = {{login.response.body.token}}
 
+### Logout - Encerrar sessão do usuário
+POST {{base_url}}/api/v1/auth/logout
+Authorization: Bearer {{jwt_token}}
+Content-Type: application/json
+
 ### ============================================
 ### PROTECTED ENDPOINTS (Requer JWT)
 ### ============================================
