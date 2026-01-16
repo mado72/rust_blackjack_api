@@ -102,9 +102,10 @@ impl AppConfig {
     /// # Configuration File Locations
     ///
     /// The method searches for `config.toml` in the following locations (in order):
-    /// 1. `crates/blackjack-api/config.toml` (for workspace root execution)
-    /// 2. `config.toml` (for execution from crate directory)
-    /// 3. `../config.toml` (fallback for test execution)
+    /// 1. `api/crates/blackjack-api/config.toml` (for workspace root execution in monorepo)
+    /// 2. `crates/blackjack-api/config.toml` (for execution from api/ directory)
+    /// 3. `config.toml` (for execution from crate directory)
+    /// 4. `../config.toml` (fallback for test execution)
     ///
     /// # Environment Variable Overrides
     ///
@@ -138,9 +139,10 @@ impl AppConfig {
     pub fn from_file() -> Result<Self, ConfigError> {
         // Try multiple paths to support different execution contexts
         let config_paths = vec![
-            "crates/blackjack-api/config.toml",
-            "config.toml",
-            "../config.toml",
+            "api/crates/blackjack-api/config.toml",  // From workspace root (monorepo structure)
+            "crates/blackjack-api/config.toml",      // From api/ directory
+            "config.toml",                            // From crate directory
+            "../config.toml",                         // Fallback for test execution
         ];
 
         let mut builder = Config::builder();
