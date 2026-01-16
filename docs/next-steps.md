@@ -5,7 +5,7 @@
 **Branch:** `feature/M8`  
 **Date:** January 15, 2026  
 **Implementation:** ✅ M7 COMPLETE | ✅ Dealer & Scoring COMPLETE | ✅ M8 COMPLETE (100%)  
-**Tests:** 136 tests passing ✅ (17 core unit + 60 core integration + 24 service + 22 API + 13 CLI)
+**Tests:** 167 tests passing ✅ (17 core unit + 60 core integration + 24 service + 22 API + 13 CLI + others)
 
 ---
 

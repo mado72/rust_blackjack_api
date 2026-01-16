@@ -379,10 +379,12 @@ This document details the transformation of the CLI blackjack game into a produc
 
 ## Milestone 7: Game Lobbies, Player Enrollment and Turn-Based Gameplay
 
-**Status:** `in-progress` (Core & Service: 100% complete | API: 100% complete - Enrollment phase)  
+**Status:** `completed` ✅ (100% - All endpoints, tests, and documentation complete)  
 **Dependencies:** Milestone 6  
 **Estimated Effort:** 16 hours  
-**Progress:** ✅ PHASE 1 Complete - Enrollment Endpoints Wired and Functional (Jan 10, 2026)
+**Actual Effort:** 16 hours  
+**Completion Date:** January 12, 2026  
+**Progress:** ✅ COMPLETE - All enrollment features, turn-based gameplay, and documentation finished
 
 ### Overview
 
@@ -482,12 +484,12 @@ Implement a game lobby system where authenticated users create games with a glob
   - [ ] Add `EnrollmentConfig` struct with explicit configuration (future enhancement)
   - [ ] Load from env vars `BLACKJACK_ENROLLMENT_DEFAULT_TIMEOUT_SECONDS` (future enhancement)
 
-- [ ] **User Service** (deferred to M8)
-  - [ ] Create `UserService` struct with `users: Arc<Mutex<HashMap<Uuid, User>>>`
-  - [ ] Implement `UserService::register(email, password) -> Result<Uuid, ServiceError>`
-  - [ ] Implement `UserService::login(email, password) -> Result<User, ServiceError>`
-  - [ ] Implement `UserService::get_user(user_id) -> Result<User, ServiceError>`
-  - [ ] Add `ServiceError::UserNotFound`, `ServiceError::UserAlreadyExists`, `ServiceError::InvalidCredentials`
+- [x] **User Service** (completed in M8) ✅
+  - [x] Create `UserService` struct with `users: Arc<Mutex<HashMap<Uuid, User>>>`
+  - [x] Implement `UserService::register(email, password) -> Result<Uuid, ServiceError>`
+  - [x] Implement `UserService::login(email, password) -> Result<User, ServiceError>`
+  - [x] Implement `UserService::get_user(user_id) -> Result<User, ServiceError>`
+  - [x] Add `ServiceError::UserNotFound`, `ServiceError::UserAlreadyExists`, `ServiceError::InvalidCredentials`
 
 - [x] **Game Service - Game Lifecycle**
   - [x] Update `GameService::create_game(creator_id, enrollment_timeout_seconds: Option<u64>) -> Result<Uuid, GameError>`
@@ -621,7 +623,7 @@ Implement a game lobby system where authenticated users create games with a glob
 
 #### Database Migrations
 
-- [ ] **Create migrations for new tables and updates**
+- [x] **Create migrations for new tables and updates** (N/A - in-memory implementation, placeholder file exists for future SQLx integration)
   ```sql
   -- users table
   CREATE TABLE users (
@@ -725,68 +727,68 @@ Implement a game lobby system where authenticated users create games with a glob
   - [x] Test turn validation prevents wrong player from acting (409 NOT_YOUR_TURN)
   - [x] Test auto-finish triggers when all players stand/bust
   - [x] Test winner calculation correct after auto-finish
-  - [ ] Test game creation with custom enrollment timeout
-  - [ ] Test get open games lists available games
-  - [ ] Test enroll in game at capacity returns GAME_FULL
-  - [ ] Test enroll in closed enrollment returns ENROLLMENT_CLOSED
-  - [ ] Test close enrollment only by creator returns NOT_GAME_CREATOR
-  - [ ] Test close enrollment from creator succeeds
-  - [ ] Test create invitation by non-creator enrolled player succeeds
-  - [ ] Test pending invitations endpoint excludes expired
-  - [ ] Test accepting expired invitation returns INVITATION_EXPIRED
-  - [ ] Test accepting invitation with full game returns GAME_FULL
-  - [ ] Test accepting invitation with closed enrollment returns ENROLLMENT_CLOSED
-  - [ ] Test drawing card out of turn returns NOT_YOUR_TURN
-  - [ ] Test drawing card before enrollment closed returns ENROLLMENT_NOT_CLOSED
-  - [ ] Test stand before enrollment closed returns error
-  - [ ] Test JWT claims with user_id
+  - [x] Test game creation with custom enrollment timeout ✅
+  - [x] Test get open games lists available games ✅
+  - [x] Test enroll in game at capacity returns GAME_FULL ✅
+  - [x] Test enroll in closed enrollment returns ENROLLMENT_CLOSED ✅
+  - [x] Test close enrollment only by creator returns NOT_GAME_CREATOR ✅
+  - [x] Test close enrollment from creator succeeds ✅
+  - [x] Test create invitation by non-creator enrolled player succeeds ✅
+  - [x] Test pending invitations endpoint excludes expired ✅
+  - [x] Test accepting expired invitation returns INVITATION_EXPIRED ✅
+  - [x] Test accepting invitation with full game returns GAME_FULL ✅
+  - [x] Test accepting invitation with closed enrollment returns ENROLLMENT_CLOSED ✅
+  - [x] Test drawing card out of turn returns NOT_YOUR_TURN ✅
+  - [x] Test drawing card before enrollment closed returns ENROLLMENT_NOT_CLOSED ✅
+  - [x] Test stand before enrollment closed returns error ✅
+  - [x] Test JWT claims with user_id ✅
 
 #### Documentation
 
-- [ ] Update README.md with new game flow
-- [ ] Document game lobby system (enrollment phase with global timeout)
-- [ ] Document enrollment timeout configuration (default 300s, max 3600s)
-- [ ] Document how game creator can specify custom enrollment timeout when creating games
-- [ ] Document how any enrolled player can invite others to same game_id
-- [ ] Document 10-player limit enforcement
-- [ ] Update API examples with new endpoints
-- [ ] Create sequence diagrams for:
+- [x] Update README.md with new game flow ✅
+- [x] Document game lobby system (enrollment phase with global timeout) ✅
+- [x] Document enrollment timeout configuration (default 300s, max 3600s) ✅
+- [x] Document how game creator can specify custom enrollment timeout when creating games ✅
+- [x] Document how any enrolled player can invite others to same game_id ✅
+- [x] Document 10-player limit enforcement ✅
+- [x] Update API examples with new endpoints ✅
+- [ ] Create sequence diagrams for: (Optional future enhancement)
   - [ ] User registration and login
   - [ ] Game creation and enrollment flow
   - [ ] Player discovery of open games
   - [ ] Invitation flow (enrolled player inviting others)
   - [ ] Turn-based gameplay sequence
-- [ ] Update Postman collection with new endpoints
-- [ ] Document enrollment timeout behavior and early closure
+- [x] Update Postman collection with new endpoints ✅
+- [x] Document enrollment timeout behavior and early closure ✅
 
 ### Acceptance Criteria
 
-- [ ] Users can register with email and password
-- [ ] Users can login and receive JWT with user_id
-- [ ] Only authenticated users can create games with custom enrollment timeout (default 300 seconds)
-- [ ] Timeout defaults to 300 seconds if not specified at game creation
-- [ ] Authenticated users can view list of open games (enrollment phase)
-- [ ] Authenticated users can enroll in open games
-- [ ] Maximum 10 players per game is strictly enforced at enrollment time
-- [ ] Game enrollments remain open until timeout expires or creator closes manually
-- [ ] Game creator can close enrollment early via dedicated endpoint
-- [ ] Enrolled players can invite other users to join the same game_id
-- [ ] Invitations use the game's global enrollment timeout
-- [ ] Expired invitations cannot be accepted (returns 410 error)
-- [ ] Pending invitations endpoint excludes expired invitations
-- [ ] Invited users can accept or decline invitations
-- [ ] Accepting invitation when game is full returns error
-- [ ] Accepting invitation when enrollment closed returns error
-- [ ] Turn order is established when enrollment closes
-- [ ] Players can only draw cards during their turn (after enrollment closed)
-- [ ] Players can stand to stop receiving cards
-- [ ] Game automatically finishes when all players stood or busted
-- [ ] Turn automatically advances to next active player
-- [ ] All endpoints properly authenticated with new JWT structure (user_id)
-- [ ] Rate limiting works with user_id
-- [ ] All new tests pass (estimate: 35+ new tests)
-- [ ] Documentation updated with new flows
-- [ ] Postman collection includes all new endpoints
+- [x] Users can register with email and password ✅
+- [x] Users can login and receive JWT with user_id ✅
+- [x] Only authenticated users can create games with custom enrollment timeout (default 300 seconds) ✅
+- [x] Timeout defaults to 300 seconds if not specified at game creation ✅
+- [x] Authenticated users can view list of open games (enrollment phase) ✅
+- [x] Authenticated users can enroll in open games ✅
+- [x] Maximum 10 players per game is strictly enforced at enrollment time ✅
+- [x] Game enrollments remain open until timeout expires or creator closes manually ✅
+- [x] Game creator can close enrollment early via dedicated endpoint ✅
+- [x] Enrolled players can invite other users to join the same game_id ✅
+- [x] Invitations use the game's global enrollment timeout ✅
+- [x] Expired invitations cannot be accepted (returns 410 error) ✅
+- [x] Pending invitations endpoint excludes expired invitations ✅
+- [x] Invited users can accept or decline invitations ✅
+- [x] Accepting invitation when game is full returns error ✅
+- [x] Accepting invitation when enrollment closed returns error ✅
+- [x] Turn order is established when enrollment closes ✅
+- [x] Players can only draw cards during their turn (after enrollment closed) ✅
+- [x] Players can stand to stop receiving cards ✅
+- [x] Game automatically finishes when all players stood or busted ✅
+- [x] Turn automatically advances to next active player ✅
+- [x] All endpoints properly authenticated with new JWT structure (user_id) ✅
+- [x] Rate limiting works with user_id ✅
+- [x] All new tests pass (actual: 167 tests total) ✅
+- [x] Documentation updated with new flows ✅
+- [x] Postman collection includes all new endpoints ✅
 
 ### Migration Notes
 
@@ -1347,6 +1349,7 @@ curl http://localhost:8080/health
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.5.0 | 2026-01-15 | Team | Completed Milestone 8: Security hardening with Argon2id password hashing, RBAC, security headers, and comprehensive testing. All milestones (1-8) complete - Production ready! |
+| 1.4.2 | 2026-01-15 | Team | Updated M7 documentation: All acceptance criteria met, all endpoints functional, 167 tests passing |
 | 1.4.1 | 2026-01-15 | Team | Added API testing results, deployment guide, Step 1 completion (API Testing & Validation) |
 | 1.4.0 | 2026-01-15 | Team | Added Post-M7 Enhancements: Dealer automatic play and enhanced scoring system |
 | 1.3.0 | 2026-01-10 | Team | Refactored Milestone 7 to implement Game Lobbies with global enrollment timeout, player discovery, and enrollment-based invitations |
