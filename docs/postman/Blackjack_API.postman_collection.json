@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Blackjack API - Enhanced with Dealer & Scoring",
-    "description": "Coleção completa de endpoints para testar a API Blackjack Multi-Player\n\n✅ STATUS: January 15, 2026\n✅ Milestones 1-7 COMPLETE + Dealer Auto-Play + Enhanced Scoring\n✅ Tests: 106 passing (60 integration tests in core)\n\n**Features:**\n- Complete game flow: Enrollment → Turns → Auto Dealer → Results\n- Automatic dealer play when all players finish\n- Enhanced scoring with per-player outcomes (Won/Lost/Push/Busted)\n- Two-player concurrent testing with separate environments\n\n**Testing Setup:**\n1. Import both environment files: Player1 and Player2\n2. Open two Postman windows/tabs\n3. Window 1: Select 'Blackjack Player 1' environment\n4. Window 2: Select 'Blackjack Player 2' environment\n5. Both share game_id via collection variables\n\n**Workflow:**\n- Player 1 creates game → game_id shared via collection variable\n- Player 2 enrolls using shared game_id\n- Both play turns concurrently\n- Last player to stand triggers automatic dealer play\n- Get results shows detailed outcomes for each player\n\nVer IMPLEMENTATION_STATUS.md e DEALER_IMPLEMENTATION.md para detalhes.",
+    "description": "Complete collection of endpoints to test the Blackjack Multi-Player API\n\n✅ STATUS: January 15, 2026\n✅ Milestones 1-7 COMPLETE + Dealer Auto-Play + Enhanced Scoring\n✅ Tests: 106 passing (60 integration tests in core)\n\n**Features:**\n- Complete game flow: Enrollment → Turns → Auto Dealer → Results\n- Automatic dealer play when all players finish\n- Enhanced scoring with per-player outcomes (Won/Lost/Push/Busted)\n- Two-player concurrent testing with separate environments\n\n**Testing Setup:**\n1. Import both environment files: Player1 and Player2\n2. Open two Postman windows/tabs\n3. Window 1: Select 'Blackjack Player 1' environment\n4. Window 2: Select 'Blackjack Player 2' environment\n5. Both share game_id via collection variables\n\n**Workflow:**\n- Player 1 creates game → game_id shared via collection variable\n- Player 2 enrolls using shared game_id\n- Both play turns concurrently\n- Last player to stand triggers automatic dealer play\n- Get results shows detailed outcomes for each player\n\nSee IMPLEMENTATION_STATUS.md and DEALER_IMPLEMENTATION.md for details.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -54,7 +54,7 @@
               "host": ["{{base_url}}"],
               "path": ["health"]
             },
-            "description": "Verifica o status básico de saúde do servidor.\n\n**Não requer autenticação**"
+            "description": "Checks the server's basic health status.\n\n**Does not require authentication**"
           },
           "response": []
         },
@@ -68,12 +68,12 @@
               "host": ["{{base_url}}"],
               "path": ["health", "ready"]
             },
-            "description": "Verifica a prontidão detalhada de todos os componentes do sistema.\n\n**Não requer autenticação**"
+            "description": "Checks detailed readiness of all system components.\n\n**Does not require authentication**"
           },
           "response": []
         }
       ],
-      "description": "Endpoints públicos para verificação de saúde do servidor"
+      "description": "Public endpoints for server health checking"
     },
     {
       "name": "Authentication",
@@ -85,11 +85,11 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Salva o user_id no environment (específico de cada player)",
+                  "// Save user_id to environment (specific to each player)",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    pm.environment.set('user_id', response.user_id);",
-                  "    console.log('User ID salvo no environment:', response.user_id);",
+                  "    console.log('User ID saved to environment:', response.user_id);",
                   "    console.log('Email:', response.email);",
                   "}"
                 ],
@@ -117,7 +117,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "register"]
             },
-            "description": "Registra um novo usuário no sistema.\n\n**Body:**\n```json\n{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePassword123!\"\n}\n```\n\n**Response:**\n- UUID do usuário criado\n- Email confirmado\n- Mensagem de sucesso\n\n**Não requer autenticação**"
+            "description": "Registers a new user in the system.\n\n**Body:**\n```json\n{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePassword123!\"\n}\n```\n\n**Response:**\n- UUID of created user\n- Confirmed email\n- Success message\n\n**Does not require authentication**"
           },
           "response": []
         },
@@ -128,12 +128,12 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Extrai e salva o token JWT no environment (específico de cada player)",
+                  "// Extract and save JWT token to environment (specific to each player)",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    pm.environment.set('jwt_token', response.token);",
-                  "    console.log('Token JWT salvo no environment');",
-                  "    console.log('Expira em:', response.expires_in, 'segundos');",
+                  "    console.log('JWT Token saved to environment');",
+                  "    console.log('Expires in:', response.expires_in, 'seconds');",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -160,12 +160,12 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "login"]
             },
-            "description": "Autentica um usuário e retorna um token JWT.\n\n**Body:**\n```json\n{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePassword123!\"\n}\n```\n\n**Response:**\n- Token JWT com expiração de 24 horas\n- O token é automaticamente salvo na variável `jwt_token`\n\n**Não requer autenticação prévia**"
+            "description": "Authenticates a user and returns a JWT token.\n\n**Body:**\n```json\n{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePassword123!\"\n}\n```\n\n**Response:**\n- JWT token with 24-hour expiration\n- Token is automatically saved to `jwt_token` variable\n\n**Does not require prior authentication**"
           },
           "response": []
         }
       ],
-      "description": "Endpoints de autenticação e registro de usuários"
+      "description": "Authentication and user registration endpoints"
     },
     {
       "name": "Game Management",
@@ -177,17 +177,17 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Salva o game_id e creator_id em COLLECTION variables (compartilhado entre players)",
+                  "// Save game_id and creator_id to COLLECTION variables (shared between players)",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    pm.collectionVariables.set('game_id', response.game_id);",
                   "    pm.collectionVariables.set('creator_id', response.creator_id);",
-                  "    console.log('✅ Game ID salvo (SHARED):', response.game_id);",
-                  "    console.log('✅ Creator ID salvo (SHARED):', response.creator_id);",
+                  "    console.log('✅ Game ID saved (SHARED):', response.game_id);",
+                  "    console.log('✅ Creator ID saved (SHARED):', response.creator_id);",
                   "    console.log('Status:', response.game_phase);",
-                  "    console.log('Enrollment expira em:', response.enrollment_timeout);",
+                  "    console.log('Enrollment expires at:', response.enrollment_timeout);",
                   "    console.log('');",
-                  "    console.log('🎮 NEXT: Player 2 pode agora se inscrever usando este game_id');",
+                  "    console.log('🎮 NEXT: Player 2 can now enroll using this game_id');",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -211,7 +211,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games"]
             },
-            "description": "**M7 FASE 1 - DISPONÍVEL ✅**\n\nCria um novo jogo no modo ENROLLMENT.\n\n**Body (opcional):**\n```json\n{\n  \"enrollment_timeout_seconds\": 300\n}\n```\n\n**Parâmetros:**\n- `enrollment_timeout_seconds`: Tempo em segundos para expiração do enrollment (opcional, padrão: 300s)\n\n**Response:**\n```json\n{\n  \"game_id\": \"uuid\",\n  \"creator_id\": \"uuid\",\n  \"game_phase\": \"Enrollment\",\n  \"enrollment_timeout\": \"2026-01-10T22:00:00Z\",\n  \"player_count\": 1\n}\n```\n\n**Requer autenticação JWT**\n**O criador é automaticamente o primeiro jogador**"
+            "description": "**M7 PHASE 1 - AVAILABLE ✅**\n\nCreates a new game in ENROLLMENT mode.\n\n**Body (optional):**\n```json\n{\n  \"enrollment_timeout_seconds\": 300\n}\n```\n\n**Parameters:**\n- `enrollment_timeout_seconds`: Time in seconds for enrollment expiration (optional, default: 300s)\n\n**Response:**\n```json\n{\n  \"game_id\": \"uuid\",\n  \"creator_id\": \"uuid\",\n  \"game_phase\": \"Enrollment\",\n  \"enrollment_timeout\": \"2026-01-10T22:00:00Z\",\n  \"player_count\": 1\n}\n```\n\n**Requires JWT authentication**\n**Creator is automatically the first player**"
           },
           "response": []
         },
@@ -225,7 +225,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games", "open"]
             },
-            "description": "**M7 FASE 1 - DISPONÍVEL ✅**\n\nLista todos os jogos atualmente em fase de ENROLLMENT (abertos para novas inscrições).\n\n**Response:**\n```json\n{\n  \"games\": [\n    {\n      \"game_id\": \"uuid\",\n      \"creator_email\": \"creator@example.com\",\n      \"player_count\": 3,\n      \"enrollment_timeout\": \"2026-01-10T22:00:00Z\",\n      \"created_at\": \"2026-01-10T21:55:00Z\"\n    }\n  ]\n}\n```\n\n**Requer autenticação JWT**\n**Apenas jogos em fase de Enrollment são retornados**\n**Máximo 10 jogadores por jogo**"
+            "description": "**M7 PHASE 1 - AVAILABLE ✅**\n\nLists all games currently in ENROLLMENT phase (open for new enrollments).\n\n**Response:**\n```json\n{\n  \"games\": [\n    {\n      \"game_id\": \"uuid\",\n      \"creator_email\": \"creator@example.com\",\n      \"player_count\": 3,\n      \"enrollment_timeout\": \"2026-01-10T22:00:00Z\",\n      \"created_at\": \"2026-01-10T21:55:00Z\"\n    }\n  ]\n}\n```\n\n**Requires JWT authentication**\n**Only games in Enrollment phase are returned**\n**Maximum 10 players per game**"
           },
           "response": []
         },
@@ -236,12 +236,12 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Verifica enrollment bem-sucedido",
+                  "// Verify successful enrollment",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
-                  "    console.log('Enrollment confirmado para jogo:', response.game_id);",
-                  "    console.log('Jogadores inscritos:', response.player_count);",
-                  "    console.log('Mensagem:', response.message);",
+                  "    console.log('Enrollment confirmed for game:', response.game_id);",
+                  "    console.log('Enrolled players:', response.player_count);",
+                  "    console.log('Message:', response.message);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -265,7 +265,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games", "{{game_id}}", "enroll"]
             },
-            "description": "**M7 FASE 1 - DISPONÍVEL ✅**\n\nInscreve um jogador em um jogo aberto (em fase de Enrollment).\n\n**Body:**\n```json\n{\n  \"email\": \"player@example.com\"\n}\n```\n\n**Validações:**\n- Jogo deve estar em fase Enrollment\n- Email no body deve corresponder ao email do JWT\n- Máximo 10 jogadores por jogo\n- Jogador não pode se inscrever duas vezes\n\n**Response:**\n```json\n{\n  \"game_id\": \"uuid\",\n  \"player_count\": 4,\n  \"message\": \"Player enrolled successfully\"\n}\n```\n\n**Erros possíveis:**\n- `409 Conflict`: Game is full (10 players)\n- `410 Gone`: Enrollment phase has ended\n- `403 Forbidden`: Email mismatch (JWT email ≠ body email)\n\n**Requer autenticação JWT**"
+            "description": "**M7 PHASE 1 - AVAILABLE ✅**\n\nEnrolls a player in an open game (in Enrollment phase).\n\n**Body:**\n```json\n{\n  \"email\": \"player@example.com\"\n}\n```\n\n**Validations:**\n- Game must be in Enrollment phase\n- Email in body must match JWT email\n- Maximum 10 players per game\n- Player cannot enroll twice\n\n**Response:**\n```json\n{\n  \"game_id\": \"uuid\",\n  \"player_count\": 4,\n  \"message\": \"Player enrolled successfully\"\n}\n```\n\n**Possible errors:**\n- `409 Conflict`: Game is full (10 players)\n- `410 Gone`: Enrollment phase has ended\n- `403 Forbidden`: Email mismatch (JWT email ≠ body email)\n\n**Requires JWT authentication**"
           },
           "response": []
         },
@@ -276,13 +276,13 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Verifica fechamento bem-sucedido",
+                  "// Verify successful closure",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
-                  "    console.log('Enrollment fechado para jogo:', response.game_id);",
-                  "    console.log('Total de jogadores:', response.player_count);",
-                  "    console.log('Ordem de turnos gerada:', response.turn_order.length, 'jogadores');",
-                  "    console.log('Mensagem:', response.message);",
+                  "    console.log('Enrollment closed for game:', response.game_id);",
+                  "    console.log('Total players:', response.player_count);",
+                  "    console.log('Turn order generated:', response.turn_order.length, 'players');",
+                  "    console.log('Message:', response.message);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -297,7 +297,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games", "{{game_id}}", "close-enrollment"]
             },
-            "description": "**M7 FASE 1 - DISPONÍVEL ✅**\n\nFecha a fase de enrollment e inicia o jogo.\n\n**Validações:**\n- Jogo deve estar em fase Enrollment\n- Apenas o CRIADOR do jogo pode fechar enrollment\n- Automaticamente gera ordem de turnos aleatória\n\n**Response:**\n```json\n{\n  \"game_id\": \"uuid\",\n  \"player_count\": 5,\n  \"turn_order\": [\n    \"player3@example.com\",\n    \"player1@example.com\",\n    \"creator@example.com\",\n    \"player2@example.com\",\n    \"player4@example.com\"\n  ],\n  \"message\": \"Enrollment closed. Game is ready to start.\"\n}\n```\n\n**Erros possíveis:**\n- `403 Forbidden`: Only game creator can close enrollment\n- `410 Gone`: Enrollment phase already ended\n\n**Requer autenticação JWT**\n**CREATOR-ONLY endpoint**"
+            "description": "**M7 PHASE 1 - AVAILABLE ✅**\n\nCloses the enrollment phase and starts the game.\n\n**Validations:**\n- Game must be in Enrollment phase\n- Only game CREATOR can close enrollment\n- Automatically generates random turn order\n\n**Response:**\n```json\n{\n  \"game_id\": \"uuid\",\n  \"player_count\": 5,\n  \"turn_order\": [\n    \"player3@example.com\",\n    \"player1@example.com\",\n    \"creator@example.com\",\n    \"player2@example.com\",\n    \"player4@example.com\"\n  ],\n  \"message\": \"Enrollment closed. Game is ready to start.\"\n}\n```\n\n**Possible errors:**\n- `403 Forbidden`: Only game creator can close enrollment\n- `410 Gone`: Enrollment phase already ended\n\n**Requires JWT authentication**\n**CREATOR-ONLY endpoint**"
           },
           "response": []
         },
@@ -311,7 +311,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games", "{{game_id}}"]
             },
-            "description": "Retorna o estado completo do jogo.\n\n**Response:**\n- Todos os jogadores e suas cartas\n- Pontos de cada jogador\n- Cartas restantes no baralho\n- Status de finalizado/ativo\n\n**Requer autenticação JWT**"
+            "description": "Returns the complete game state.\n\n**Response:**\n- All players and their cards\n- Points for each player\n- Remaining cards in deck\n- Finished/active status\n\n**Requires JWT authentication**"
           },
           "response": []
         },
@@ -325,7 +325,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games", "{{game_id}}", "finish"]
             },
-            "description": "Finaliza o jogo e calcula o vencedor.\n\n**Response:**\n- Vencedor (email)\n- Jogadores empatados (se houver)\n- Pontuação mais alta\n- Informações de todos os jogadores\n\n**Requer autenticação JWT**"
+            "description": "Finishes the game and calculates the winner.\n\n**Response:**\n- Winner (email)\n- Tied players (if any)\n- Highest score\n- Information for all players\n\n**Requires JWT authentication**"
           },
           "response": []
         },
@@ -385,7 +385,7 @@
           "response": []
         }
       ],
-      "description": "Endpoints para gerenciar jogos"
+      "description": "Endpoints for managing games"
     },
     {
       "name": "Player Actions",
@@ -395,19 +395,19 @@
           "event": [
             {
               "listen": "test",
-              "script": {card_id no ENVIRONMENT (cada player tem suas próprias cartas)",
+              "script": {
+                "exec": [
+                  "// Save card_id to ENVIRONMENT (each player has their own cards)",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    if (response.card && response.card.name === 'Ace') {",
                   "        pm.environment.set('card_id', response.card.id);",
-                  "        console.log('♠️  && response.card.name === 'Ace') {",
-                  "        pm.collectionVariables.set('card_id', response.card.id);",
-                  "        console.log('Ás comprado! Card ID salvo:', response.card.id);",
+                  "        console.log('Ace drawn! Card ID saved:', response.card.id);",
                   "    }",
-                  "    console.log('Carta:', response.card.name, 'de', response.card.suit);",
-                  "    console.log('Pontos atuais:', response.current_points);",
-                  "    console.log('Estourou?', response.busted);",
-                  "    console.log('Cartas restantes:', response.cards_remaining);",
+                  "    console.log('Card:', response.card.name, 'of', response.card.suit);",
+                  "    console.log('Current points:', response.current_points);",
+                  "    console.log('Busted?', response.busted);",
+                  "    console.log('Cards remaining:', response.cards_remaining);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -422,7 +422,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games", "{{game_id}}", "draw"]
             },
-            "description": "Compra uma carta do baralho para o jogador autenticado.\n\n**Response:**\n- Carta comprada (nome, valor, naipe)\n- Pontos atuais\n- Se estourou (busted)\n- Cartas restantes no baralho\n- Histórico completo de cartas\n\n**Requer autenticação JWT**\n\n**Nota:** O script de teste salva automaticamente o ID de Ases para facilitar testes de mudança de valor."
+            "description": "Draws a card from the deck for the authenticated player.\n\n**Response:**\n- Drawn card (name, value, suit)\n- Current points\n- Whether busted\n- Remaining cards in deck\n- Complete card history\n\n**Requires JWT authentication**\n\n**Note:** The test script automatically saves Ace IDs to facilitate value change testing."
           },
           "response": []
         },
@@ -445,11 +445,13 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games", "{{game_id}}", "ace"]
             },
-            "description": "Altera o valor de um Ás entre 1 e 11 pontos.\n\n**Body:**\n```json\n{\n  \"card_id\": \"uuid-da-carta\",\n  \"as_eleven\": true\n}\n```\n\n**Parâmetros:**\n- `card_id`: UUID do Ás a ser alterado\n- `as_eleven`: `true` para 11 pontos, `false` para 1 ponto\n\n**Response:**\n- Pontos atualizados\n- Status de bust\n\n**Requer autenticação JWT**\n\n**Nota:** Use a variável `{{card_id}}` que é preenchida automaticamente quando você compra um Ás."
+            "description": "Changes an Ace value between 1 and 11 points.\n\n**Body:**\n```json\n{\n  \"card_id\": \"card-uuid\",\n  \"as_eleven\": true\n}\n```\n\n**Parameters:**\n- `card_id`: UUID of the Ace to be changed\n- `as_eleven`: `true` for 11 points, `false` for 1 point\n\n**Response:**\n- Updated points\n- Bust status\n\n**Requires JWT authentication**\n\n**Note:** Use the `{{card_id}}` variable which is automatically filled when you draw an Ace."
           },
           "response": []
         },
-        {event": [
+        {
+          "name": "Stand",
+          "event": [
             {
               "listen": "test",
               "script": {
@@ -482,14 +484,12 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games", "{{game_id}}", "stand"]
             },
-            "description": "**Player stands (stops drawing cards)**\n\n✅ **AUTOMATIC DEALER PLAY:**\nWhen the LAST player stands, the dealer automatically plays!\n- Dealer draws until reaching 17+ points\n- Game finishes automatically\n- Results become available\n\n**Response:**\n- Player's final points\n- Whether player busted\n- `game_finished`: true if dealer played and game completed\n- Message indicating next step\n\n**Requires JWT authentication**\n\n**Multi-player Testing:**\n1. Player 1 stands → game_finished: false\n2. Player 2 stands → game_finished: TRUE, dealer auto-plays\n3. GET /results → see detailed outcomes for each player
-            },
-            "description": "Jogador fica de pé (para de comprar cartas).\n\n**Response:**\n- Pontos atuais do jogador\n- Se o jogador estourou\n- Mensagem de sucesso\n- Se o jogo foi finalizado automaticamente (quando todos os jogadores terminaram)\n\n**Requer autenticação JWT**\n\n**Nota:** Se todos os jogadores ficarem de pé ou estourarem, o jogo é finalizado automaticamente."
+            "description": "**Player stands (stops drawing cards)**\n\n✅ **AUTOMATIC DEALER PLAY:**\nWhen the LAST player stands, the dealer automatically plays!\n- Dealer draws until reaching 17+ points\n- Game finishes automatically\n- Results become available\n\n**Response:**\n- Player's final points\n- Whether player busted\n- `game_finished`: true if dealer played and game completed\n- Message indicating next step\n\n**Requires JWT authentication**\n\n**Multi-player Testing:**\n1. Player 1 stands → game_finished: false\n2. Player 2 stands → game_finished: TRUE, dealer auto-plays\n3. GET /results → see detailed outcomes for each player"
           },
           "response": []
         }
       ],
-      "description": "Ações que os jogadores podem realizar durante o jogo"
+      "description": "Actions that players can perform during the game"
     },
     {
       "name": "Invitations",
@@ -501,13 +501,13 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Salva o invitation_id automaticamente",
+                  "// Save invitation_id automatically",
                   "if (pm.response.code === 200) {",
                   "    const response = pm.response.json();",
                   "    pm.collectionVariables.set('invitation_id', response.invitation_id);",
-                  "    console.log('Invitation ID salvo:', response.invitation_id);",
-                  "    console.log('Convidado:', response.invitee_email);",
-                  "    console.log('Expira em:', response.expires_at);",
+                  "    console.log('Invitation ID saved:', response.invitation_id);",
+                  "    console.log('Invitee:', response.invitee_email);",
+                  "    console.log('Expires at:', response.expires_at);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -531,7 +531,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "games", "{{game_id}}", "invitations"]
             },
-            "description": "Cria um convite para um jogador participar do jogo.\n\n**Body:**\n```json\n{\n  \"invitee_email\": \"newplayer@example.com\",\n  \"timeout_seconds\": 600\n}\n```\n\n**Parâmetros:**\n- `invitee_email`: Email do jogador a ser convidado\n- `timeout_seconds`: Tempo de expiração do convite em segundos (opcional)\n\n**Response:**\n- ID do convite\n- Email do convidado\n- Data/hora de expiração\n- Mensagem de sucesso\n\n**Requer autenticação JWT**\n**Apenas o criador do jogo pode enviar convites**"
+            "description": "Creates an invitation for a player to join the game.\n\n**Body:**\n```json\n{\n  \"invitee_email\": \"newplayer@example.com\",\n  \"timeout_seconds\": 600\n}\n```\n\n**Parameters:**\n- `invitee_email`: Email of the player to be invited\n- `timeout_seconds`: Invitation expiration time in seconds (optional)\n\n**Response:**\n- Invitation ID\n- Invitee email\n- Expiration date/time\n- Success message\n\n**Requires JWT authentication**\n**Only the game creator can send invitations**"
           },
           "response": []
         },
@@ -545,7 +545,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "invitations", "pending"]
             },
-            "description": "Lista todos os convites pendentes para o usuário autenticado.\n\n**Response:**\n- Lista de convites pendentes\n- Para cada convite: ID, jogo, convidante, data de criação e expiração\n\n**Requer autenticação JWT**"
+            "description": "Lists all pending invitations for the authenticated user.\n\n**Response:**\n- List of pending invitations\n- For each invitation: ID, game, inviter, creation and expiration dates\n\n**Requires JWT authentication**"
           },
           "response": []
         },
@@ -559,7 +559,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "invitations", "{{invitation_id}}", "accept"]
             },
-            "description": "Aceita um convite para participar de um jogo.\n\n**Response:**\n- Mensagem de sucesso\n\n**Requer autenticação JWT**\n**O usuário autenticado deve ser o destinatário do convite**"
+            "description": "Accepts an invitation to join a game.\n\n**Response:**\n- Success message\n\n**Requires JWT authentication**\n**The authenticated user must be the invitation recipient**"
           },
           "response": []
         },
@@ -573,12 +573,12 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "invitations", "{{invitation_id}}", "decline"]
             },
-            "description": "Recusa um convite para participar de um jogo.\n\n**Response:**\n- Mensagem de sucesso\n\n**Requer autenticação JWT**\n**O usuário autenticado deve ser o destinatário do convite**"
+            "description": "Declines an invitation to join a game.\n\n**Response:**\n- Success message\n\n**Requires JWT authentication**\n**The authenticated user must be the invitation recipient**"
           },
           "response": []
         }
       ],
-      "description": "Endpoints para gerenciar convites de jogos"
+      "description": "Endpoints for managing game invitations"
     }
   ]
 }
