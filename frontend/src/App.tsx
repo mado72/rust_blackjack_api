@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import './index.scss';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -7,7 +8,6 @@ import LobbyPage from './pages/LobbyPage';
 import GamePage from './pages/GamePage';
 import Header from './components/shared/Header';
 import { AuthProvider } from './contexts/AuthContext';
-import './index.css';
 
 const App: React.FC = () => {
   return (
